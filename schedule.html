@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="zh-cmn-Hans">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="BI system demo">
+    <meta name="author" content="Louis">
+
+    <!-- Bootstrap -->
+    <link href="http://192.168.0.186/static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="http://192.168.0.186/static/css/bootstrap-theme.min.css" rel="stylesheet">
+    <script type="text/javascript" src="http://192.168.0.186/static/js/jquery-2.0.3.min.js"></script>
+    <script type="text/javascript" src="http://192.168.0.186/static/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="http://192.168.0.186/static/js/Bs-Table/bootstrap-table.js"></script>
+    
+    <title>展示板</title>
+
+  </head>
+
+<body role="document" data-spy="scroll" data-target="sidebarMenu">
+    
+    <div class="container-fluid">
+        
+        <div class="row">
+            <div class="page-header" id='dashboard_title'>
+               <h2  style="margin-left: 10px">生产排产</h2>
+           </div>
+        </div>
+
+        <div class="row" id='plan_content'>
+            <div class="row">
+                <div class="col-md-1">订单号</div>
+                <div class="col-md-2">采购</div>
+                <div class="col-md-2">织布</div>
+                <div class="col-md-2">织布后整</div>
+                <div class="col-md-2">生产</div>
+                <div class="col-md-1">完成时间</div>
+                <div class="col-md-2"><button type="button" class="btn btn-info" id="genrate_report">生成报告</button></div>
+            </div>
+        </div>
+
+        <hr>
+        
+        <div class="row" id='data_dash'>
+            <div class="col-md-2">
+                <form method="get" role="form">
+                    <div class="form-group">
+                        <label>计划完成时间</label><input class="form-control" type="date" name="since">
+                    </div>
+
+                    <div class="form-group">
+                        <label>状态</label>
+                         <select class="form-control" name='statue_6'>
+                             <option value='生产中'>生产中</option>
+                             <option value='未开始'>未开始</option>
+                             <option value='完成'>完成</option>
+                             <option value=''></option>
+                         </select>
+                    </div>
+
+                    <button type="submit" class="btn-info">筛选</button>
+                 </form>
+            </div>
+            <div class="col-md-10"><table id="orderTable" class="table"></table></div>
+        </div>
+
+      <hr>
+      <div class="row" id="report"></div>
+    
+
+    </div>
+<script type="text/javascript">
+
+const PURCHASE_DAY = 10
+const AFTER_WEAVING_DAY = 10
+const WEAVING_PER_DAY = 100
+const PRODUCE_PER_DAY = 100
+const DEFAULT_INTERVAL = 0
+
+$(document).ready(function(){
+    const current_url = decodeURI(window.location.href)
+
+    var filter_paramets = []
+    var filter_form = {}
+    var time_filter = {}
+    
+    if (current_url.indexOf('?') > -1){
+    var paramets = current_url.split('?')[1].split('&')
+    paramets.forEach(function(val, index, arr){
+        var v = val.split('=')
+
+        if (v[1] !== '') {
+            //不是时间参数,暂时单选
+            //TODO: 多选
+            if (v[0]!=='since') {
+                filter_paramets.push({
+                  col:v[0],
+                  op:"in",
+                  val:[v[1]]
+              })
+              filter_form[v[0]] = v[1]
+            } else {
+              //时间参数
+              //console.log('time filter', v)
+              time_filter[v[0]] = v[1]
+            }
+            
+        }
+        
+    })
+  }
+
+  generate_table(filter_paramets, time_filter)
+  $('#genrate_report').click(function(){
+      report()
+  })
+ })
+
+//boostrap-table
+function generate_table(filter_paramets, time_filter) {
+
+
+　　　//获取数据
+    // var url = 'http://192.168.0.94:8088/superset/explore_json/table/29/?form_data=%7B%22datasource%22%3A%2229__table%22%2C%22viz_type%22%3A%22table%22%2C%22slice_id%22%3A101%2C%22granularity_sqla%22%3A%22end_date_2%22%2C%22time_grain_sqla%22%3A%22day%22%2C%22since%22%3A%22100+years+ago%22%2C%22until%22%3A%22now%22%2C%22groupby%22%3A%5B%22order_id_0%22%2C%22statue_6%22%5D%2C%22metrics%22%3A%5B%22sum__cloth_4%22%2C%22avg__wh_per_one_5%22%2C%22sum__qty_3%22%5D%2C%22include_time%22%3Atrue%2C%22timeseries_limit_metric%22%3Anull%2C%22order_desc%22%3Atrue%2C%22all_columns%22%3A%5B%5D%2C%22order_by_cols%22%3A%5B%5D%2C%22table_timestamp_format%22%3A%22%25Y-%25m-%25d+%25H%3A%25M%3A%25S%22%2C%22number_format%22%3A%22.3s%22%2C%22row_limit%22%3Anull%2C%22page_length%22%3A0%2C%22include_search%22%3Afalse%2C%22table_filter%22%3Afalse%2C%22where%22%3A%22%22%2C%22having%22%3A%22%22%2C%22filters%22%3A%5B%5D%7D'
+
+   var url = 'http://192.168.0.94:8088/superset/explore_json/table/29/'
+
+   var form_data = {"having": "", "number_format": ".3s", "metrics": ["sum__cloth_4", "avg__wh_per_one_5", "sum__qty_3"], "all_columns": [], "since": "100 years ago", "timeseries_limit_metric": null, "groupby": ["order_id_0", "statue_6"], "granularity_sqla": "end_date_2", "where": "", "filters": [], "row_limit": null, "time_grain_sqla": "day", "slice_id": 101, "table_filter": false, "include_search": false, "order_by_cols": [], "viz_type": "table", "include_time": true, "order_desc": true, "datasource": "29__table", "until": "now", "table_timestamp_format": "%Y-%m-%d %H:%M:%S", "page_length": 0}
+
+   console.log(filter_paramets, time_filter)
+
+   //选择框
+
+   if(filter_paramets.length > 0){
+       form_data['extra_filters'] = filter_paramets                
+    }
+
+   for(var key in time_filter) {
+       form_data[key] = time_filter[key]
+    }
+
+   
+   url = url + '?form_data=' + JSON.stringify(form_data)
+
+    $.get(url).done(function (response) {
+
+        function genarate_fileds(datas){
+            var fields = [{field: '', title: '序号',formatter: function (value, row, index) {return index + 1;}}]
+            datas.forEach(function(val, index, arr){
+                fields.push({
+                    field: val,
+                    title: change_name(val), //别名转化
+                    sortable: true
+                })
+            })
+            return fields
+        }
+
+        response.data.records.forEach(function(val,index,arr){
+            val.__timestamp = numberToDatetime(val.__timestamp)
+        })
+
+        console.log(response)
+
+        var table_option = {
+            search: true,
+            pagination: true,
+            pageNumber: 1,
+            pageSize: 10 ,
+            pageList: [10, 20, 30, 50],
+            cache: false,
+            //height:'80%',
+            paginationPreText: "上一页",
+            paginationNextText: "下一页",
+            striped: true,
+            showRefresh: false,
+            //sortName:'CreateTime',
+            //sortOrder:'desc',
+            //showColumns:true,
+            //toolbar: '#toolbar',
+            //singleSelect: true,           // 单选checkbox
+            //
+            //showExport: true,     //下载
+            //exportDataType: "all",
+            //exportTypes: ['excel'],
+            columns: genarate_fileds(response.data.columns),
+            data: response.data.records,
+            onClickRow: function (item, $element) {
+                add_row(item)
+            },
+
+        }
+
+        //更新
+        $('#orderTable').bootstrapTable('destroy').bootstrapTable(table_option)
+        $('#orderTable').bootstrapTable('hideLoading')
+    })   
+
+}
+
+
+//整体报告
+function report(){
+  var all_children = $('#plan_content').children()
+
+  var weavy_groups = {'defaut':[]}
+  var produce_groups = {'defaut':[]}
+
+  for(var i=1;i<all_children.length;i++){
+    //取得ID
+    ids_dict = return_element_id(all_children[i].id)
+    
+    if (ids_dict == undefined) {
+      console.log('第' + i + '个元素没有找到数据')
+      continue
+    }
+    //织布分组
+    var w_g  = $(ids_dict.id_weaving_group).val()
+
+    console.log('group:',w_g)
+    
+    //采购排序-->织布开始
+
+
+    //生产分组
+    //后整排序-->生产开始
+  }
+}
+
+
+//增加行
+function add_row(item) {
+    var html_text = '<div class="row" id="'+item.order_id_0
+                  +'" data-cloth="'+item.sum__cloth_4
+                  +'" data-qty="'+ item.sum__qty_3
+                  +'" data-being_date="'+ item.__timestamp+'">'
+
+    html_text += '<div class="col-md-1">'+item.order_id_0+'</div>'
+
+    for(var i=0; i<4; i++) {
+
+        html_text += '<div class="col-md-2"><input type="date" id="'+item.order_id_0+'_being_'+String(i)
+                  +'"><input type="date" id="'+item.order_id_0+'_end_'+String(i)
+                  +'"></br><input type="number" id="'+ item.order_id_0 + '_value_'+String(i)
+
+        if(i % 2 ==1){
+          html_text += '"></br>组别:<input type="number" id="'+ item.order_id_0 + '_group_'+String(i)+ '"></div>'
+        } else {
+          html_text += '"></div>'
+        }
+    }
+
+    html_text += '<div class="col-md-1"><input type="date" id="'+item.order_id_0+'_result'+'"></div>'
+
+    html_text += '<div class="col-md-2">'
+              +'<button class="btn-sm btn-primary" type="button" onclick=calc_data("'+ item.order_id_0 +'")>计算</button>'
+              +'<button class="btn-sm btn-danger" type="button" onclick=delete_row("'+ item.order_id_0 +'")>删除</button></div>'
+    html_text += '</div>'
+
+
+    $('#plan_content').append(html_text)
+
+
+    calc_data(item.order_id_0)
+    
+}
+
+//删除行
+function delete_row(item_id) {
+  $('#'+item_id).remove()
+}
+
+function calc_data(item_id) {
+
+    item = document.getElementById(item_id)
+    
+    //取得ID
+    ids_dict = return_element_id(item_id)
+
+    //开始计算
+    //采购
+    $(ids_dict.id_purchase_begin).val(item.dataset.being_date)
+    var purchase_during = $(ids_dict.id_purchase_during).val()
+    if(purchase_during == ''){
+      purchase_during = PURCHASE_DAY
+    }
+    $(ids_dict.id_purchase_during).val(purchase_during)
+
+    var pruchase_end = date_calc(item.dataset.being_date, purchase_during)
+    $(ids_dict.id_purchase_end).val(pruchase_end)
+
+    //织布   
+    //默认上一个结束 == 下个的开始
+    var wearing_begin = date_calc(pruchase_end, DEFAULT_INTERVAL)
+    $(ids_dict.id_weaving_begin).val(wearing_begin )
+
+    var weaving_per = $(ids_dict.id_weaving_per).val()
+    if(weaving_per == ''){
+      weaving_per = WEAVING_PER_DAY
+      $(ids_dict.id_weaving_per).val(weaving_per)
+    }
+    
+    var weaving_end = date_calc(wearing_begin, parseInt(item.dataset.cloth/weaving_per))
+    $(ids_dict.id_weaving_end).val(weaving_end)
+
+    //织布后整
+    var after_weaving_begin = date_calc(weaving_end, DEFAULT_INTERVAL)
+    $(ids_dict.id_after_weaving_begin).val(after_weaving_begin)
+    
+    var after_weaving_during = $(ids_dict.id_after_weaving_during).val()
+
+    if(after_weaving_during == ''){
+      after_weaving_during = AFTER_WEAVING_DAY
+      $(ids_dict.id_after_weaving_during).val(after_weaving_during)
+    }
+
+    var after_weaving_end = date_calc(after_weaving_begin, after_weaving_during)
+    $(ids_dict.id_after_weaving_end).val(after_weaving_end)
+
+    //生产
+    var produce_being = date_calc(after_weaving_end, DEFAULT_INTERVAL)
+    $(ids_dict.id_produce_begin).val(produce_being)
+    
+    var produce_per = $(ids_dict.id_produce_per).val()
+
+    if(produce_per == ''){
+      produce_per = PRODUCE_PER_DAY
+      $(ids_dict.id_produce_per).val(produce_per)
+    }
+
+    var produce_end = date_calc(produce_being, parseInt(item.dataset.qty/produce_per))
+    $(ids_dict.id_produce_end).val(produce_end)
+
+    $(ids_dict.id_result).val(date_calc(produce_end, DEFAULT_INTERVAL))
+}
+
+
+//返回对应ID
+function return_element_id(item_id){
+
+    console.log('id:', item_id)
+
+    if (item_id == null || item_id == undefined) {
+       return
+    }
+
+    var dict = {}
+
+    dict.id_purchase_begin = '#'+item_id + '_being_0'
+    dict.id_purchase_end = '#'+item_id + '_end_0'
+    dict.id_purchase_during = '#'+item_id + '_value_0'
+    
+    dict.id_weaving_begin = '#'+item_id + '_being_1'
+    dict.id_weaving_end = '#'+item_id + '_end_1'
+    dict.id_weaving_per = '#'+item_id + '_value_1'
+    dict.id_weaving_group = '#'+item_id+ '_group_1'
+
+    dict.id_after_weaving_begin = '#'+item_id + '_being_2'
+    dict.id_after_weaving_end = '#'+item_id + '_end_2'
+    dict.id_after_weaving_during = '#'+item_id + '_value_2'
+
+    dict.id_produce_begin = '#'+item_id + '_being_3'
+    dict.id_produce_end = '#'+item_id + '_end_3'
+    dict.id_produce_per = '#'+item_id + '_value_3'
+    dict.id_produce_group = '#'+item_id+ '_group_3'
+
+    dict.id_result = '#' + item_id + '_result'
+
+    return dict
+}
+
+//转换中文
+function change_name(origin){
+    switch(origin){
+      case 'order_id_0':
+        return '订单编号'
+      case 'statue_6':
+        return '订单状态'
+      case '__timestamp':
+        return '计划开始时间'
+      case 'sum__cloth_4':
+        return '布料长度'
+      case 'avg__wh_per_one_5':
+        return '每件衣服工时'
+    　case 'sum__qty_3':
+        return '衣服数量'
+    　default:
+        return origin　
+    }
+}
+
+//数字转日期
+function numberToDatetime(date, type='datetime'){
+    var tmp_datetime = new Date()
+    var date_num = Number(date)
+  
+    if (type=='date') {
+        //,
+        //console.log('time', start)
+        date_num = date_num * 1000
+        //console.log('time-change', date_num)
+        tmp_datetime.setTime(date_num)
+    } else {
+        //tmp_datetime.setTime(date_num * 1000)
+        tmp_datetime.setTime(date_num)
+    }
+    
+    return date_format_for_input(tmp_datetime.toLocaleDateString())
+}
+
+//日期格式 2017/07/01 --> 2017-12-01
+function date_format_for_input(date_string){
+  date_string = date_string.split('/')
+
+  return date_string[0]+'-'+((date_string[1]-'10'<0)?'0'+date_string[1]:date_string[1])+'-'+((date_string[2]-'10'<0)?'0'+date_string[2]:date_string[2])
+}
+
+//日期加减
+function date_calc(date_string, interval, action='+'){
+  date = new Date(date_string.replace(/-/,"/"))
+  
+  interval = parseInt(interval)
+  if( interval== 0) {
+    interval += 1
+  }
+
+  if(action == '+') {
+    date.setDate(date.getDate() + interval)
+  } else {
+    date.setDate(date.getDate() - interval)
+  }
+  
+  return date_format_for_input(date.toLocaleDateString())
+}
+
+</script>
+</body>
