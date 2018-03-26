@@ -15,6 +15,32 @@
     <script type="text/javascript" src="http://192.168.0.186/static/js/Bs-Table/bootstrap-table.js"></script>
     
     <title>展示板</title>
+    <style type="text/css">
+  
+        ul{
+          padding: 0;
+          margin: 0;
+        }
+        li{
+          padding: 10px;
+          margin-bottom: 20px;
+          margin-left: 10px;
+          border-top: 1px solid #ccc;
+          border-bottom: 1px solid #ccc;
+          font: 14px/1.5 "微软雅黑";
+          list-style: none;
+          cursor: move;
+        }
+        li:hover{
+          background-color: #f6f6f6;
+        }
+        .col-md-2>input:nth-child(4){
+          width: 70px;
+        }
+        .col-md-2>input:nth-child(6){
+          width: 115px;
+        }
+    </style>
 
   </head>
 
@@ -38,6 +64,21 @@
                 <div class="col-md-1">完成时间</div>
                 <div class="col-md-2"><button type="button" class="btn btn-info" id="genrate_report">生成报告</button></div>
             </div>
+            <div class="row" id="wrap">
+                <ul>
+                  
+                </ul>
+            </div>
+            <script src="js/ddsort.js"></script>
+            <script>
+              $( '#wrap' ).DDSort({
+                target: 'li',    
+                floatStyle: {
+                  'border': '1px solid #ccc',
+                  'background-color': '#fff'
+                }
+              });
+            </script>
         </div>
 
         <hr>
@@ -328,7 +369,7 @@ function calc_groups(group, orders_info, type_group) {
 
 //增加行
 function add_row(item) {
-    var html_text = '<div class="row" id="'+item.order_id_0
+    var html_text = '<li><div class="row" id="'+item.order_id_0
                   +'" data-cloth="'+item.sum__cloth_4
                   +'" data-qty="'+ item.sum__qty_3
                   +'" data-being_date="'+ item.__timestamp+'">'
@@ -353,10 +394,10 @@ function add_row(item) {
     html_text += '<div class="col-md-2">'
               +'<button class="btn-sm btn-primary" type="button" onclick=calc_data("'+ item.order_id_0 +'")>计算</button>'
               +'<button class="btn-sm btn-danger" type="button" onclick=delete_row("'+ item.order_id_0 +'")>删除</button></div>'
-    html_text += '</div>'
+    html_text += '</div></li>'
 
 
-    $('#plan_content').append(html_text)
+    $('#wrap').append(html_text)
 
 
     calc_data(item.order_id_0)
