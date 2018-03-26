@@ -13,7 +13,7 @@
     <script type="text/javascript" src="http://192.168.0.186/static/js/jquery-2.0.3.min.js"></script>
     <script type="text/javascript" src="http://192.168.0.186/static/js/bootstrap.min.js"></script>
     <script type="text/javascript" src="http://192.168.0.186/static/js/Bs-Table/bootstrap-table.js"></script>
-    <script src="js/ddsort.js"></script>
+    <script type="text/javascript" src="http://192.168.0.186/static/js/ddsort.js"></script>
 
     <title>展示板</title>
     <style type="text/css">
@@ -295,8 +295,12 @@ function generate_report(w_group, p_group, orders){
 
   for (var group_id in w_group) {
 
+    if(w_group[group_id].length < 1){
+      continue
+    }
+
     html += '<div class="panel panel-default"><div class="panel-heading">组别' +  group_id + '</div>'
-    html += '<div class="panel-body"><table class="table"><tr><td>订单号</td><td>采购</td><td>织布</td><td>后整</td></tr>'
+    html += '<div class="panel-body"><table class="table table-striped"><tr><td>订单号</td><td>采购</td><td>织布</td><td>后整</td></tr>'
     for(var i=0;i<w_group[group_id].length;i++){ 
       
       html += '<tr><td>' + w_group[group_id][i] + '</td>'
@@ -312,12 +316,15 @@ function generate_report(w_group, p_group, orders){
   html = '<div class="col-md-6"><h4>生产</h4>'
 
   for (var group_id in p_group) {
+    if(p_group[group_id].length < 1){
+      continue
+    }
 
     html += '<div class="panel panel-default"><div class="panel-heading">组别' +  group_id + '</div>'
-    html += '<div class="panel-body"><table class="table"><tr><td>订单号</td><td>后整</td><td>生产</td><td>完成</td></tr>'
+    html += '<div class="panel-body"><table class="table table-striped"><tr><td>订单号</td><td>后整</td><td>生产</td><td>完成</td></tr>'
 
     for(var i=0;i<p_group[group_id].length;i++){ 
-      html += '<tr><td>' + w_group[group_id][i] + '</td>'
+      html += '<tr><td>' + p_group[group_id][i] + '</td>'
       html += '<td>(' + orders[p_group[group_id][i]]['after_weaving_begin'] + '至' + orders[p_group[group_id][i]]['after_weaving_end'] + ')</td>'
       html += '<td>(' + orders[p_group[group_id][i]]['produce_begin'] + '至' + orders[p_group[group_id][i]]['produce_end'] + ')</td>'
       html += '<td>(' + orders[p_group[group_id][i]]['result'] + ')</td>'
@@ -461,7 +468,7 @@ function add_row(item) {
                   +'"></br><input type="number" id="'+ item.order_id_0 + '_value_'+String(i)
 
         if(i % 2 ==1){
-          html_text += '"></br>组别:<input type="number" id="'+ item.order_id_0 + '_group_'+String(i)+ '"></div>'
+          html_text += '"></br>组别:<input type="text" id="'+ item.order_id_0 + '_group_'+String(i)+ '"></div>'
         } else {
           html_text += '"></div>'
         }
@@ -484,7 +491,7 @@ function add_row(item) {
 
 //删除行
 function delete_row(item_id) {
-  $('#'+item_id).remove()
+  $('#'+item_id).parent().remove()
 }
 
 function calc_data(item_id) {
