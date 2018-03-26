@@ -204,8 +204,10 @@ function generate_table(filter_paramets, time_filter) {
 function report(){
   var all_children = $('#plan_content').children()
 
-  var weavy_groups = {'defaut':[]}
-  var produce_groups = {'defaut':[]}
+  var weavy_groups = {'default':[]}
+  var produce_groups = {'default':[]}
+
+  var orders_info = {}
 
   for(var i=1;i<all_children.length;i++){
     //取得ID
@@ -215,19 +217,114 @@ function report(){
       console.log('第' + i + '个元素没有找到数据')
       continue
     }
+
+    //保存订单信息
+    order = add_order_info(orders_info, ids_dict, all_children[i].id)
+
     //织布分组
-    var w_g  = $(ids_dict.id_weaving_group).val()
-
-    console.log('group:',w_g)
-    
-    //采购排序-->织布开始
-
+    if(order.weaving_group == '') {
+      add_groups(weavy_groups, all_children[i].id)
+    } else {
+      add_groups(weavy_groups, all_children[i].id, group_id=order.weaving_group)
+    }
 
     //生产分组
-    //后整排序-->生产开始
+    if(order.produce_group == '') {
+      add_groups(produce_groups, all_children[i].idd)
+    } else {
+      add_groups(produce_groups, all_children[i].id, group_id=order.produce_group)
+    }
   }
+
+  console.log(weavy_groups, produce_groups)
+  //采购排序-->织布开始
+  calc_groups(weavy_groups, orders_info, type_group = 'weavy')
+
+  //后整排序-->生产开始
+  calc_groups(produce_groups, orders_info, type_group = 'produce')
+
+  //输出报告
+  // generate_report(weavy_groups, produce_groups, orders_info)
 }
 
+
+//存储订单信息
+function add_order_info(order_dic, ids_dict, order_id){
+
+  order_dic[order_id] = {
+    'purchase_begin':$(ids_dict.id_purchase_begin).val(),
+    'purchase_end':$(ids_dict.id_purchase_end).val(),
+    'purchase_during':$(ids_dict.id_purchase_during).val(),
+
+    'weaving_begin':$(ids_dict.id_weaving_begin).val(),
+    'weaving_end':$(ids_dict.id_weaving_end).val(),
+    'weaving_per':$(ids_dict.id_weaving_per).val(),
+    'weaving_group':$(ids_dict.id_weaving_group).val(),
+
+    'after_weaving_begin':$(ids_dict.id_after_weaving_begin).val(),
+    'after_weaving_end':$(ids_dict.id_after_weaving_end).val(),
+    'after_weaving_during':$(ids_dict.id_after_weaving_during).val(),
+
+    'produce_begin':$(ids_dict.id_produce_begin).val(),
+    'produce_end':$(ids_dict.id_produce_end).val(),
+    'produce_per':$(ids_dict.id_produce_per).val(),
+    'produce_group':$(ids_dict.id_produce_group).val(),
+
+    'result':$(ids_dict.id_result).val(),
+  }
+
+  return order_dic[order_id]
+}
+
+//分组
+function add_groups(group, order_id, group_id='default'){
+  if (group[group_id] == undefined) {
+    group[group_id] = []
+    group[group_id].push(order_id)   
+  } else {
+    group[group_id].push(order_id)
+  }
+  
+}
+
+//根据分组排产
+function calc_groups(group, orders_info, type_group) {
+  var order_by
+  switch (type_group) {
+    case 'weavy':
+    order_by = 'purchase_end'
+    break
+
+    case 'produce':
+    order_by = 'after_weaving_end'
+    break
+
+  　default:
+    return
+  }
+  
+  //织布按照采购日期排序, 从小到大
+  for (var group_id in group) {
+    for(var i=0;i<group[group_id].length;i++){
+      for(var j=i+1;j<group[group_id].length;j++){
+
+        if (date_compare(orders_info[group[group_id][i]][order_by], orders_info[group[group_id][j]][order_by])){
+           var tmp = group[group_id][j]
+           group[group_id][j] = group[group_id][i]
+           group[group_id][i] = tmp
+        }
+      }
+    }
+  }
+
+  for (var group_id in group) {
+    for(var i=0;i<group[group_id].length;i++){
+      console.log(group[group_id][i])
+    }
+  }
+
+  //生成按照后整日期排序
+}
 
 //增加行
 function add_row(item) {
@@ -432,6 +529,16 @@ function date_calc(date_string, interval, action='+'){
   }
   
   return date_format_for_input(date.toLocaleDateString())
+}
+
+//比较日期
+function date_compare(date_string_1, date_string_2){
+  //日期越大,越靠前
+  //-------------time1-------------time2-------------->>
+  //time2 > time1
+  var date_1 = new Date(date_string_1.replace(/-/,"/"))
+  var date_2 = new Date(date_string_2.replace(/-/,"/"))
+  return (date_1 > date_2)
 }
 
 </script>
