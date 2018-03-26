@@ -13,7 +13,8 @@
     <script type="text/javascript" src="http://192.168.0.186/static/js/jquery-2.0.3.min.js"></script>
     <script type="text/javascript" src="http://192.168.0.186/static/js/bootstrap.min.js"></script>
     <script type="text/javascript" src="http://192.168.0.186/static/js/Bs-Table/bootstrap-table.js"></script>
-    
+    <script src="js/ddsort.js"></script>
+
     <title>展示板</title>
     <style type="text/css">
   
@@ -64,23 +65,13 @@
                 <div class="col-md-1">完成时间</div>
                 <div class="col-md-2"><button type="button" class="btn btn-info" id="genrate_report">生成报告</button></div>
             </div>
-            <div class="row" id="wrap">
-                <ul>
-                  
-                </ul>
-            </div>
-            <script src="js/ddsort.js"></script>
-            <script>
-              $( '#wrap' ).DDSort({
-                target: 'li',    
-                floatStyle: {
-                  'border': '1px solid #ccc',
-                  'background-color': '#fff'
-                }
-              });
-            </script>
+            <div class="row"><ul id="wrap"></ul></div>
+
         </div>
 
+        <hr>
+        <div class="row" id="report"></div>
+        
         <hr>
         
         <div class="row" id='data_dash'>
@@ -106,8 +97,7 @@
             <div class="col-md-10"><table id="orderTable" class="table"></table></div>
         </div>
 
-      <hr>
-      <div class="row" id="report"></div>
+      
     
 
     </div>
@@ -156,6 +146,14 @@ $(document).ready(function(){
   $('#genrate_report').click(function(){
       report()
   })
+
+  $('#wrap').DDSort({
+      target: 'li',    
+      floatStyle: {
+        'border': '1px solid #ccc',
+        'background-color': '#fff'
+      }
+    });
  })
 
 //boostrap-table
@@ -243,16 +241,17 @@ function generate_table(filter_paramets, time_filter) {
 
 //整体报告
 function report(){
-  var all_children = $('#plan_content').children()
+  var all_children = $('#wrap').children()
 
   var weavy_groups = {'default':[]}
   var produce_groups = {'default':[]}
 
   var orders_info = {}
 
-  for(var i=1;i<all_children.length;i++){
+  for(var i=0;i<all_children.length;i++){
     //取得ID
-    ids_dict = return_element_id(all_children[i].id)
+    item = all_children[i].children[0]
+    ids_dict = return_element_id(item.id)
     
     if (ids_dict == undefined) {
       console.log('第' + i + '个元素没有找到数据')
@@ -260,20 +259,20 @@ function report(){
     }
 
     //保存订单信息
-    order = add_order_info(orders_info, ids_dict, all_children[i].id)
+    order = add_order_info(orders_info, ids_dict, item.id)
 
     //织布分组
     if(order.weaving_group == '') {
-      add_groups(weavy_groups, all_children[i].id)
+      add_groups(weavy_groups, item.id)
     } else {
-      add_groups(weavy_groups, all_children[i].id, group_id=order.weaving_group)
+      add_groups(weavy_groups, item.id, group_id=order.weaving_group)
     }
 
     //生产分组
     if(order.produce_group == '') {
-      add_groups(produce_groups, all_children[i].idd)
+      add_groups(produce_groups, item.id)
     } else {
-      add_groups(produce_groups, all_children[i].id, group_id=order.produce_group)
+      add_groups(produce_groups, item.id, group_id=order.produce_group)
     }
   }
 
@@ -285,13 +284,55 @@ function report(){
   calc_groups(produce_groups, orders_info, type_group = 'produce')
 
   //输出报告
-  // generate_report(weavy_groups, produce_groups, orders_info)
+  generate_report(weavy_groups, produce_groups, orders_info)
+}
+
+
+//整理报告
+function generate_report(w_group, p_group, orders){
+  $('#report').empty()
+  var html = '<div class="col-md-6"><h4>织布</h4>'
+
+  for (var group_id in w_group) {
+
+    html += '<div class="panel panel-default"><div class="panel-heading">组别' +  group_id + '</div>'
+    html += '<div class="panel-body"><table class="table"><tr><td>订单号</td><td>采购</td><td>织布</td><td>后整</td></tr>'
+    for(var i=0;i<w_group[group_id].length;i++){ 
+      
+      html += '<tr><td>' + w_group[group_id][i] + '</td>'
+      html += '<td>(' + orders[w_group[group_id][i]]['purchase_begin'] + '至' + orders[w_group[group_id][i]]['purchase_end'] + ')</td>'
+      html += '<td>(' + orders[w_group[group_id][i]]['weaving_begin'] + '至' + orders[w_group[group_id][i]]['weaving_end'] + ')</td>'
+      html += '<td>(' + orders[w_group[group_id][i]]['after_weaving_begin'] + '至' + orders[w_group[group_id][i]]['after_weaving_end'] + ')</td></tr>'
+    }
+    html += '</table></div>'
+  }
+  
+  $('#report').append(html)
+
+  html = '<div class="col-md-6"><h4>生产</h4>'
+
+  for (var group_id in p_group) {
+
+    html += '<div class="panel panel-default"><div class="panel-heading">组别' +  group_id + '</div>'
+    html += '<div class="panel-body"><table class="table"><tr><td>订单号</td><td>后整</td><td>生产</td><td>完成</td></tr>'
+
+    for(var i=0;i<p_group[group_id].length;i++){ 
+      html += '<tr><td>' + w_group[group_id][i] + '</td>'
+      html += '<td>(' + orders[p_group[group_id][i]]['after_weaving_begin'] + '至' + orders[p_group[group_id][i]]['after_weaving_end'] + ')</td>'
+      html += '<td>(' + orders[p_group[group_id][i]]['produce_begin'] + '至' + orders[p_group[group_id][i]]['produce_end'] + ')</td>'
+      html += '<td>(' + orders[p_group[group_id][i]]['result'] + ')</td>'
+    }
+    html += '</table></div>'
+  }
+
+  $('#report').append(html)
 }
 
 
 //存储订单信息
 function add_order_info(order_dic, ids_dict, order_id){
-
+  item = document.getElementById(order_id)
+  
   order_dic[order_id] = {
     'purchase_begin':$(ids_dict.id_purchase_begin).val(),
     'purchase_end':$(ids_dict.id_purchase_end).val(),
@@ -312,6 +353,9 @@ function add_order_info(order_dic, ids_dict, order_id){
     'produce_group':$(ids_dict.id_produce_group).val(),
 
     'result':$(ids_dict.id_result).val(),
+
+    'cloth':item.dataset.cloth,
+    'qty':item.dataset.qty,
   }
 
   return order_dic[order_id]
@@ -334,10 +378,14 @@ function calc_groups(group, orders_info, type_group) {
   switch (type_group) {
     case 'weavy':
     order_by = 'purchase_end'
+    compare_i = 'weaving_end'
+    compare_j = 'weaving_begin'
     break
 
     case 'produce':
     order_by = 'after_weaving_end'
+    compare_i = 'produce_end'
+    compare_j = 'produce_begin'
     break
 
   　default:
@@ -346,10 +394,10 @@ function calc_groups(group, orders_info, type_group) {
   
   //织布按照采购日期排序, 从小到大
   for (var group_id in group) {
-    for(var i=0;i<group[group_id].length;i++){
+    for(var i=0;i<group[group_id].length-1;i++){
       for(var j=i+1;j<group[group_id].length;j++){
-
-        if (date_compare(orders_info[group[group_id][i]][order_by], orders_info[group[group_id][j]][order_by])){
+        //debugger
+        if (date_compare_large(orders_info[group[group_id][i]][order_by], orders_info[group[group_id][j]][order_by])){
            var tmp = group[group_id][j]
            group[group_id][j] = group[group_id][i]
            group[group_id][i] = tmp
@@ -359,12 +407,42 @@ function calc_groups(group, orders_info, type_group) {
   }
 
   for (var group_id in group) {
-    for(var i=0;i<group[group_id].length;i++){
-      console.log(group[group_id][i])
+    for(var i=0;i<group[group_id].length-1;i++){
+      //如果同组,要等前面完成,下一个才能开始
+      if(date_compare_large(orders_info[group[group_id][i]][compare_i], orders_info[group[group_id][i+1]][compare_j])){
+          //重新计算后整结束日期
+          recalc_date(
+            orders_info[group[group_id][i+1]], 
+            num_days(orders_info[group[group_id][i]][compare_i], orders_info[group[group_id][i+1]][compare_j]),
+            type_group
+          )
+      }
     }
   }
 
-  //生成按照后整日期排序
+}
+
+//日期比较,按固定日子推延
+function recalc_date(order, days, type_date){
+
+  switch (type_date) {
+    case 'weavy':
+    order['weaving_begin'] = date_calc(order['weaving_begin'], days)
+    order['weaving_end'] = date_calc(order['weaving_end'], days)
+    order['after_weaving_begin'] = date_calc(order['after_weaving_begin'], days)
+    order['after_weaving_end'] = date_calc(order['after_weaving_end'], days)
+    break
+
+    case 'produce':
+    order['produce_begin'] = date_calc(order['produce_begin'], days)
+    order['produce_end'] = date_calc(order['produce_end'], days)
+    order['result'] = date_calc(order['result'], days)
+    break
+
+  　default:
+    return
+  }
+
 }
 
 //增加行
@@ -554,6 +632,14 @@ function date_format_for_input(date_string){
   return date_string[0]+'-'+((date_string[1]-'10'<0)?'0'+date_string[1]:date_string[1])+'-'+((date_string[2]-'10'<0)?'0'+date_string[2]:date_string[2])
 }
 
+
+//日期相差天数
+function num_days(date_1, date_2){
+  var date_1 = new Date(date_1.replace(/-/,"/"))
+  var date_2 = new Date(date_2.replace(/-/,"/"))
+  return (date_1 - date_2) / (1000 * 60 * 60 * 24)
+}
+
 //日期加减
 function date_calc(date_string, interval, action='+'){
   date = new Date(date_string.replace(/-/,"/"))
@@ -573,7 +659,7 @@ function date_calc(date_string, interval, action='+'){
 }
 
 //比较日期
-function date_compare(date_string_1, date_string_2){
+function date_compare_large(date_string_1, date_string_2){
   //日期越大,越靠前
   //-------------time1-------------time2-------------->>
   //time2 > time1
