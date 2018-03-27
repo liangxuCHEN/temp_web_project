@@ -22,7 +22,7 @@
           padding: 0;
           margin: 0;
         }
-        li{
+        #wrap>li{
           padding: 10px;
           margin-bottom: 20px;
           margin-left: 10px;
@@ -32,7 +32,7 @@
           list-style: none;
           cursor: move;
         }
-        li:hover{
+        #wrap>li:hover{
           background-color: #f6f6f6;
         }
         .col-md-2>input:nth-child(4){
@@ -42,10 +42,25 @@
           width: 115px;
         }
     </style>
+    <script>
+      
+      function Window_Load(){
+        var t = document.getElementById("orderTable");
+        var rows = t.getElementsByTagName("tr");
+         
+        //给tr绑定click事件
+        for(var i in rows){
+          rows[i].onclick = rowClick;
+        }
+      }
+      function rowClick(e){ 
+        alert(this.rowIndex); //显示所点击的行的索引
+      }
+    </script>
 
   </head>
 
-<body role="document" data-spy="scroll" data-target="sidebarMenu">
+<body role="document" data-spy="scroll" data-target="sidebarMenu" onload="Window_Load();">
     
     <div class="container-fluid">
         
@@ -103,6 +118,8 @@
     </div>
 <script type="text/javascript">
 
+  
+
 const PURCHASE_DAY = 10
 const AFTER_WEAVING_DAY = 10
 const WEAVING_PER_DAY = 100
@@ -153,8 +170,10 @@ $(document).ready(function(){
         'border': '1px solid #ccc',
         'background-color': '#fff'
       }
-    });
- })
+    })
+
+  
+})
 
 //boostrap-table
 function generate_table(filter_paramets, time_filter) {
@@ -226,7 +245,16 @@ function generate_table(filter_paramets, time_filter) {
             columns: genarate_fileds(response.data.columns),
             data: response.data.records,
             onClickRow: function (item, $element) {
-                add_row(item)
+                    if ($("#"+item.order_id_0).length < 1) {
+                        add_row(item);
+                        console.log("aaa");
+                        if ($("#"+item.order_id_0).length > 1) {
+                          !add_row(item);
+                          console.log("bbb");
+                        }
+                    }
+                      
+                
             },
 
         }
@@ -483,9 +511,20 @@ function add_row(item) {
 
 
     $('#wrap').append(html_text)
-
+    
 
     calc_data(item.order_id_0)
+    onchang_calc_data(item.order_id_0)
+
+    $(function(){
+        $('#div_title li').on('click',function(){
+            if($(this).css('backgroundColor')=='red'){
+                 $(this).css("backgroundColor","");
+            }else{
+                $(this).css("backgroundColor","red");
+            }
+        });
+    });
     
 }
 
@@ -494,8 +533,19 @@ function delete_row(item_id) {
   $('#'+item_id).parent().remove()
 }
 
-function calc_data(item_id) {
+// $("#"+item_id).change(function(){
 
+// })
+
+
+function onchang_calc_data(item_id){
+  $("#"+item_id).change(function(){
+      calc_data(item_id)
+  })
+}
+//计算
+function calc_data(item_id){
+    
     item = document.getElementById(item_id)
     
     //取得ID
@@ -556,7 +606,73 @@ function calc_data(item_id) {
     $(ids_dict.id_produce_end).val(produce_end)
 
     $(ids_dict.id_result).val(date_calc(produce_end, DEFAULT_INTERVAL))
+  
 }
+
+
+// function calc_data(item_id) {
+
+//     item = document.getElementById(item_id)
+    
+//     //取得ID
+//     ids_dict = return_element_id(item_id)
+
+//     //开始计算
+//     //采购
+//     $(ids_dict.id_purchase_begin).val(item.dataset.being_date)
+//     var purchase_during = $(ids_dict.id_purchase_during).val()
+//     if(purchase_during == ''){
+//       purchase_during = PURCHASE_DAY
+//     }
+//     $(ids_dict.id_purchase_during).val(purchase_during)
+
+//     var pruchase_end = date_calc(item.dataset.being_date, purchase_during)
+//     $(ids_dict.id_purchase_end).val(pruchase_end)
+
+//     //织布   
+//     //默认上一个结束 == 下个的开始
+//     var wearing_begin = date_calc(pruchase_end, DEFAULT_INTERVAL)
+//     $(ids_dict.id_weaving_begin).val(wearing_begin )
+
+//     var weaving_per = $(ids_dict.id_weaving_per).val()
+//     if(weaving_per == ''){
+//       weaving_per = WEAVING_PER_DAY
+//       $(ids_dict.id_weaving_per).val(weaving_per)
+//     }
+    
+//     var weaving_end = date_calc(wearing_begin, parseInt(item.dataset.cloth/weaving_per))
+//     $(ids_dict.id_weaving_end).val(weaving_end)
+
+//     //织布后整
+//     var after_weaving_begin = date_calc(weaving_end, DEFAULT_INTERVAL)
+//     $(ids_dict.id_after_weaving_begin).val(after_weaving_begin)
+    
+//     var after_weaving_during = $(ids_dict.id_after_weaving_during).val()
+
+//     if(after_weaving_during == ''){
+//       after_weaving_during = AFTER_WEAVING_DAY
+//       $(ids_dict.id_after_weaving_during).val(after_weaving_during)
+//     }
+
+//     var after_weaving_end = date_calc(after_weaving_begin, after_weaving_during)
+//     $(ids_dict.id_after_weaving_end).val(after_weaving_end)
+
+//     //生产
+//     var produce_being = date_calc(after_weaving_end, DEFAULT_INTERVAL)
+//     $(ids_dict.id_produce_begin).val(produce_being)
+    
+//     var produce_per = $(ids_dict.id_produce_per).val()
+
+//     if(produce_per == ''){
+//       produce_per = PRODUCE_PER_DAY
+//       $(ids_dict.id_produce_per).val(produce_per)
+//     }
+
+//     var produce_end = date_calc(produce_being, parseInt(item.dataset.qty/produce_per))
+//     $(ids_dict.id_produce_end).val(produce_end)
+
+//     $(ids_dict.id_result).val(date_calc(produce_end, DEFAULT_INTERVAL))
+// }
 
 
 //返回对应ID
