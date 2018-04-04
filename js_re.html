@@ -15,13 +15,13 @@
 		'paste B7:B10 formulas',
 		// 'set AD11 value n 10',
 		// 'set CD11 value n 10',
-		// 'set A110 value n 10',
-		// 'set B11 value n 10',
-		'paste A7:C15 formulas',
+		// 'set E110 value n 10',
+		// 'set BB11 value n 10',
+		'paste A7:ABC15 formulas',
 		// 'xxxxxxxx sdfsf',
-		'paste B7:DA15 formulas',
-		'paste AAA7:ACE15 formulas',
-		'paste AC7:AD15 formulas',
+		// 'paste B7:DA15 formulas',
+		// 'paste AEF7:AFE15 formulas',
+		// 'paste AC7:AD15 formulas',
 	]
 
 	var allow_columns = ['A', 'B', 'C', 'AC', 'AD']
@@ -61,6 +61,8 @@
 				console.log(begin, end)
 
 				colums_contains.length = 0 //清空数据
+
+				//find_all_columns(begin, end, end.length-1, '')  //检查验证用的
 				var can_run = find_columns(begin, end, end.length-1, '')
 
 				console.log('是否能运行',can_run)
@@ -91,7 +93,7 @@
 		if(index < 0){
 			//输出编码
 			if (has_contain(column)){
-				console.log(column)	
+				//console.log(column)	
 				return true
 			} else {
 				return false
@@ -111,13 +113,14 @@
 					}
 				}
 			} else {
-				var end_next_index = end[index-1]
-				end[index-1] = 'Z'.charCodeAt()
+				var tmp_end = end.slice()
+				for(var j=index-1;j>=0;j--){
+					tmp_end[j] = 'Z'.charCodeAt()
+				}
 				//少一位的遍历
-				if (!find_columns(begin, end, index-1, tmp)){
+				if (!find_columns(begin, tmp_end, index-1, tmp)){
 					return false
 				}
-				end[index-1] = end_next_index
 			}
 
 			begin[index] = 'A'.charCodeAt()  //补充'A'为上一位继续比较
@@ -159,8 +162,69 @@
 			}
 		}
 
-		//全部通过,符合要求
+		//全部通过,
 		return true
+	}
+
+
+	function find_all_columns(begin, end, index, column){
+		
+		if(index < 0){
+			//输出编码
+			console.log(column)
+			return
+		}
+
+		//判断编码情况
+		if(begin[index] == undefined){
+			//缺位
+			if (index-1==0) {
+				//最后一位
+				for(var i=begin[index-1];i<='Z'.charCodeAt();i++){
+					var tmp = column + String.fromCharCode(i)
+					find_all_columns(begin, end, index-2, tmp)
+				}
+			} else {
+				var tmp_end = end.slice()
+				for(var j=index-1;j>=0;j--){
+					tmp_end[j] = 'Z'.charCodeAt()
+				}
+				//少一位的遍历
+				find_all_columns(begin, tmp_end, index-1, column)
+			}
+
+			begin[index] = 'A'.charCodeAt()  //补充'A'为上一位继续比较
+			find_all_columns(begin, end, index, column)
+
+		} else {
+			if (index-1<0) {
+				//到最后一位
+				for(var i=begin[index];i<=end[index];i++) {
+					var tmp = column + String.fromCharCode(i)
+					find_all_columns(begin, end, index-1, tmp)
+				}
+			} else if(begin[index] == end[index]) {
+				//高一位相等
+				for(var i=begin[index];i<=end[index];i++) {
+					var tmp = column + String.fromCharCode(i)
+					find_all_columns(begin, end, index-1, tmp)
+				} 
+			} else {
+				//高一位不等
+				var end_next_index = end[index-1]
+				end[index-1] = 'Z'.charCodeAt()
+
+				for(var i=begin[index];i<end[index];i++){
+					var tmp = column + String.fromCharCode(i)
+					find_all_columns(begin, end, index-1, tmp)
+					begin[index-1] = 'A'.charCodeAt()
+				}
+				//最后一个不用变'Z'
+				end[index-1] = end_next_index
+				var tmp = column + String.fromCharCode(end[index])
+				find_all_columns(begin, end, index-1, tmp)
+			}
+		}
 	}
 
 </script>
