@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html >
+<head>
+  <title>Auth_coloums</title>
+  <meta charset="utf-8" />
+
+</head>
+
+<body>
+
+</body>
+
+<script type="text/javascript">
+	var command_list = [
+		'paste B7:B10 formulas',
+		// 'set AD11 value n 10',
+		// 'set CD11 value n 10',
+		// 'set A110 value n 10',
+		// 'set B11 value n 10',
+		'paste A7:C15 formulas',
+		// 'xxxxxxxx sdfsf',
+		'paste B7:DA15 formulas',
+		'paste AAA7:ACE15 formulas',
+		'paste AC7:AD15 formulas',
+	]
+
+	var allow_columns = ['A', 'B', 'C', 'AC', 'AD']
+	var colums_contains = new Array()
+
+	command_list.forEach(function(val, index, arr){
+		var cmdstr_list = val.split(' ')
+    	var reg = RegExp(/^\D+/)
+
+    	var res = cmdstr_list[1].match(reg)
+    	
+    	if(res){
+    		//是否选择连续表格
+    		if(res['input'].search(':') == -1){
+    			//没有
+    			if(has_contain(res[0])){
+    				console.log('运行:', res['input'])
+    			}
+    		} else {
+    			//有
+				var tmp_coloums = res['input'].split(':')
+				var begin = tmp_coloums[0].match(reg)
+				all_columns = []
+
+				if(begin){
+					begin = chart_to_number(begin[0])
+				} else {
+					console.log('error', res) 
+				}
+
+				var end = tmp_coloums[1].match(reg)
+				if(end){
+					end = chart_to_number(end[0])
+				} else {
+					console.log('error', res) 
+				}
+				console.log(begin, end)
+
+				colums_contains.length = 0 //清空数据
+				var can_run = find_columns(begin, end, end.length-1, '')
+
+				console.log('是否能运行',can_run)
+				if(can_run){
+					console.log('运行:', res['input'])
+				}
+
+    		}
+    	}
+	})
+
+
+	function chart_to_number(str){
+		var number = new Array()
+		for (var i=0;i<str.length;i++) {
+			number[i] = str[i].charCodeAt()
+		}
+		return number.reverse()
+	}
+
+	function has_contain(str){
+		return allow_columns.indexOf(str) !== -1
+	}
+	
+
+	function find_columns(begin, end, index, column){
+		
+		if(index < 0){
+			//输出编码
+			if (has_contain(column)){
+				console.log(column)	
+				return true
+			} else {
+				return false
+			}
+			
+		}
+
+		//判断编码情况
+		if(begin[index] == undefined){
+			//缺位
+			if (index-1==0) {
+				//最后一位
+				for(var i=begin[index-1];i<='Z'.charCodeAt();i++){
+					var tmp = column + String.fromCharCode(i)
+					if (!find_columns(begin, end, index-2, tmp)){
+						return false
+					}
+				}
+			} else {
+				var end_next_index = end[index-1]
+				end[index-1] = 'Z'.charCodeAt()
+				//少一位的遍历
+				if (!find_columns(begin, end, index-1, tmp)){
+					return false
+				}
+				end[index-1] = end_next_index
+			}
+
+			begin[index] = 'A'.charCodeAt()  //补充'A'为上一位继续比较
+			return find_columns(begin, end, index, column)
+
+		} else {
+			if (index-1<0) {
+				//到最后一位
+				for(var i=begin[index];i<=end[index];i++) {
+					var tmp = column + String.fromCharCode(i)
+					if (!find_columns(begin, end, index-1, tmp)){
+						return false
+					}
+				}
+			} else if(begin[index] == end[index]) {
+				//高一位相等
+				for(var i=begin[index];i<=end[index];i++) {
+					var tmp = column + String.fromCharCode(i)
+					if (!find_columns(begin, end, index-1, tmp)){
+						return false
+					}
+				} 
+			} else {
+				//高一位不等
+				var end_next_index = end[index-1]
+				end[index-1] = 'Z'.charCodeAt()
+
+				for(var i=begin[index];i<end[index];i++){
+					var tmp = column + String.fromCharCode(i)
+					if (!find_columns(begin, end, index-1, tmp)){
+						return false
+					}
+					begin[index-1] = 'A'.charCodeAt()
+				}
+				//最后一个不用变'Z'
+				end[index-1] = end_next_index
+				var tmp = column + String.fromCharCode(end[index])
+				return find_columns(begin, end, index-1, tmp)
+			}
+		}
+
+		//全部通过,符合要求
+		return true
+	}
+
+</script>
+
+
+</html>
