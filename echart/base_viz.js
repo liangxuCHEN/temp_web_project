@@ -1,7 +1,7 @@
-// const base_dashboard_url = 'http://192.168.0.94/superset/dashboard_json/'
-// const base_slice_url = 'http://192.168.0.94/superset/explore_json/table/'
-const base_dashboard_url = 'http://192.168.0.186:8088/superset/dashboard_json/'
-const base_slice_url = 'http://192.168.0.186:8088/superset/explore_json/table/'
+const base_dashboard_url = 'http://192.168.0.94/superset/dashboard_json/'
+const base_slice_url = 'http://192.168.0.94/superset/explore_json/table/'
+// const base_dashboard_url = 'http://192.168.0.186:8088/superset/dashboard_json/'
+// const base_slice_url = 'http://192.168.0.186:8088/superset/explore_json/table/'
 
 const dashboard_title_id = '#dashboard_title'
 const dashboard_content_id = '#data_dash'
@@ -14,7 +14,8 @@ const background_color = "#333"
 const colors = ['#fad797', '#59ccf7', '#c3b4df']
 
 //echart风格
-var chart_style = 'vintage' //html要相应引入主题js文件
+// var chart_style = 'dark' //html要相应引入主题js文件
+
 
 var echart_dict = {} //存放echart实例
 
@@ -100,12 +101,13 @@ if (current_url.indexOf('?') > -1) {
 function read_dashboard(dashboard_id, force_refresh = false, interval = 0) {
     console.log(force_refresh, interval)
     var get_dashboat_url
-
     var slice_width_unit = Math.floor(document.documentElement.clientWidth / 12) - 1
     //请求数据
     $.get(base_dashboard_url + dashboard_id).done(function (response) {
         // 先拿这个图表的参数
         console.log(response)
+
+        var chart_style = response.dashboard.metadata.echart_style;
         //初始化
         $(dashboard_title_id).children().remove()
 
@@ -135,18 +137,18 @@ function read_dashboard(dashboard_id, force_refresh = false, interval = 0) {
             '<div class="pull-right" id="control_menu"> </div></h2>')
 
         //右边控制工具
+        //设置css主题样式
+        $('#control_menu').append('<button type="button" class="btn btn-default" data-toggle="modal" data-target="#CssModal" id="change_css"><span class="glyphicon glyphicon-asterisk" aria-hidden="true"></span></button>')
+
         //TODO: 添加权限显示
         //强制新的刷新, 清除echart
 
         $('#control_menu').append('<button type="button" class="btn btn-default" id="force_refresh" onclick="read_dashboard(' +
             response.dashboard.id + ',force_refresh=true)"><span class="glyphicon glyphicon-refresh" aria-hidden="true"></span></button>')
 
-        //TODO:弹出框来设置定时刷新 改interval的值
-        $('#control_menu').append('<button type="button" class="btn btn-default" id="auto_refresh" onclick="read_dashboard(' +
-            response.dashboard.id + ',force_refresh=true, interval=5000)"><span class="glyphicon glyphicon-time" aria-hidden="true"></span></button>')
+        // 点击按钮弹出设置时间间隔选择框
+        $('#control_menu').append('<button type="button" class="btn btn-default" data-toggle="modal" data-target="#TimeModal" id="refresh_select"><span class="glyphicon glyphicon-time" aria-hidden="true"></span></button>')
 
-        //stop 定时刷新 TODO 看能不能停掉setTimeout     
-        $('#control_menu').append('<button type="button" class="btn btn-default" id="stop_refresh" onclick="location.reload()"><span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span></button>')
 
         //首次加载是否已经收藏
         if (fravstar_action == 'count') {
@@ -157,7 +159,39 @@ function read_dashboard(dashboard_id, force_refresh = false, interval = 0) {
                 $('#fravstar').removeClass("glyphicon-heart-empty").addClass('glyphicon-heart')
             }
         }
+        //操作样式框
+        var radios = document.querySelectorAll("input[name='theme']")
+        var btn_theme = document.querySelectorAll(".btn_theme");
+        for (let i = 0; i < radios.length; i++) {
+            if (radios[i].value == chart_style) {
+                radios[i].setAttribute('checked', 'checked');
+                if (radios[i].checked) {
+                    btn_theme[i].className = "btn_theme theme_checked";
+                }
+            }
+            radios[i].index = i;
+            radios[i].onclick = function () {
+                for (let i = 0; i < radios.length; i++) {
+                    btn_theme[i].className = "btn_theme";
+                }
+                btn_theme[this.index].className = "btn_theme theme_checked"
+            }
+        }
+        $("#btn_confirm").click(function () {
+            chart_style = $("input[name='theme']:checked").val();
+            $.get('http://192.168.0.94/save_dash_css/' + dashboard_id + "?echart_style=" + chart_style,  function (res) {
+                console.log(res);
+                if(res.status==0){
+                    for (const key in echart_dict) {
+                        echart_dict[key].dispose()
+                    }
+                    read_dashboard(response.dashboard.id)
+                }else{
+                    console.log(res.message);
+                }
+            })
 
+        })
         //每个slice
         response.dashboard.slices.forEach(function (val, index, arr) {
 
@@ -205,11 +239,11 @@ function read_dashboard(dashboard_id, force_refresh = false, interval = 0) {
             verbose_map = response.verbose_map
             if (interval > 0) {
                 setTimeout(
-                    add_slice(position, url, val.slice_name, val.description, slice_width_unit, force_refresh),
+                    add_slice(position, url, val.slice_name, val.description, slice_width_unit, force_refresh, chart_style),
                     interval + index * 300
                 )
             } else {
-                add_slice(position, url, val.slice_name, val.description, slice_width_unit, force_refresh)
+                add_slice(position, url, val.slice_name, val.description, slice_width_unit, force_refresh, chart_style)
             }
 
 
@@ -231,7 +265,8 @@ function read_dashboard(dashboard_id, force_refresh = false, interval = 0) {
 }
 
 
-function add_slice(position, url, slice_name, description, slice_width_unit, force_refresh) {
+
+function add_slice(position, url, slice_name, description, slice_width_unit, force_refresh, chart_style) {
 
     //console.log(response)
     var slice_id = 'slice_cell' + position['slice_id']
@@ -307,8 +342,8 @@ function add_slice(position, url, slice_name, description, slice_width_unit, for
                 var myChart
                 if (!force_refresh) {
                     myChart = echarts.init(document.getElementById(slice_id), chart_style)
-
                     echart_dict[slice_id] = myChart
+
                 } else {
                     myChart = echart_dict[slice_id]
                     myChart.clear()
@@ -470,23 +505,23 @@ function generate_chart(mychart, data, slice_name, description, url) {
             if (data.form_data.stat_unit == 'city') {
                 option = china_city(data.data, data.form_data)
             } else {
-                option = china_map(data.data)
+                option = china_map(data.data, data.form_data)
             }
             break;
         case 'world_map':
-            option = world_map(data.data)
+            option = world_map(data.data, data.form_data)
             break;
         case 'big_number':
             option = big_number_viz(data.data, data.form_data)
             break;
         case 'big_number_total':
-            option = big_number_total(data.data, data.form_data.y_axis_format)
+            option = big_number_total(data.data, data.form_data)
             break;
         case 'word_cloud':
-            option = word_cloud(data.data)
+            option = word_cloud(data.data, data.form_data)
             break;
         case 'treemap':
-            option = treemap(data.data, data.form_data.datasource)
+            option = treemap(data.data, data.form_data)
             break;
         case 'box_plot':
             option = box_plot(data.data, data.form_data)
@@ -508,22 +543,22 @@ function generate_chart(mychart, data, slice_name, description, url) {
 
             break;
         case 'cal_heatmap':
-            option = cal_heatmap(data.data)
+            option = cal_heatmap(data.data, data.form_data)
             break;
         case 'histogram':
-            option = histogram(data.data)
+            option = histogram(data.data, data.form_data)
             break;
         case 'sunburst':
             option = sunburst(data.data, data.form_data)
             break;
         case 'sankey':
-            option = sankey(data.data)
+            option = sankey(data.data, data.form_data)
             break;
         case 'directed_force':
-            option = directed_force(data.data)
+            option = directed_force(data.data, data.form_data)
             break;
         case 'chord':
-            option = chord(data.data)
+            option = chord(data.data, data.form_data)
             break;
         case 'para':
             option = parallel(data.data, data.form_data)
@@ -1118,7 +1153,7 @@ function big_number_viz(data, fd) {
 
 //大数字
 function big_number_total(data, data_form) {
-
+    data_from = data_form.y_axis_format
     option = {
         title: [{
             z: 5,
@@ -1144,7 +1179,7 @@ function big_number_total(data, data_form) {
 }
 
 //地图
-function world_map(data) {
+function world_map(data, fd) {
     //TODO：还有气泡没有做
     var option = {}
     var values = []
@@ -1195,7 +1230,7 @@ function world_map(data) {
 
 
 //中国地图
-function china_map(data) {
+function china_map(data, fd) {
 
     var option = {}
     var values = []
@@ -1211,7 +1246,7 @@ function china_map(data) {
     })
 
     option = {
-        tooltip:optionTooltip(fd),
+        tooltip: optionTooltip(fd),
 
         visualMap: {
             //min: 'dataMin',
@@ -1285,7 +1320,7 @@ function china_city(data, fd) {
                 }
             }
         },
-        tooltip:optionTooltip(fd),
+        tooltip: optionTooltip(fd),
         visualMap: {
             //min: 0,   //暂时没有负数
             max: max_value,
@@ -1331,7 +1366,7 @@ function china_city(data, fd) {
 
 
 //词云
-function word_cloud(data) {
+function word_cloud(data, fd) {
     // 数据适配echart格式
     var option = {}
     var values = []
@@ -1397,8 +1432,8 @@ function calcule_treemap_total(parent, child_data) {
 
 
 //树状图
-function treemap(data, table_id) {
-
+function treemap(data, fd) {
+    table_id = fd.datasource
     series_name = data[0]['name']
     data[0]['name'] = verbose_map[table_id][series_name] || series_name
     data[0] = calcule_treemap_total(data[0], data[0].children)
@@ -1517,7 +1552,7 @@ function box_plot(data, fd) {
 }
 
 //时间热力图
-function cal_heatmap(data) {
+function cal_heatmap(data, fd) {
 
     var option
     var date_value = []
@@ -1532,7 +1567,6 @@ function cal_heatmap(data) {
     }
     option = {
         tooltip: optionTooltip(fd),
-
         visualMap: {
             min: 0,
             max: max_value,
@@ -1566,12 +1600,12 @@ function cal_heatmap(data) {
             type: 'heatmap',
             coordinateSystem: 'calendar',
             data: date_value,
-            tooltip: {
-                // TODO：显示调整
-                formatter: function (data) {
-                    return data.value[0] + '<br/>' + data.value[1]
-                },
-            },
+            // tooltip: {
+            //     // TODO：显示调整
+            //     formatter: function (data) {
+            //         return data.value[0] + '<br/>' + data.value[1]
+            //     },
+            // },
         },
 
     }
@@ -1893,7 +1927,7 @@ function regression(data, fd) {
 }
 
 //直方图
-function histogram(data) {
+function histogram(data, fd) {
     var option
     var bins = ecStat.histogram(data)
 
@@ -1901,7 +1935,7 @@ function histogram(data) {
         // tooltip: {
         //     trigger: 'axis'
         // },
-        tooltip: optionTooltip(),
+        tooltip: optionTooltip(fd),
         xAxis: [{
             type: 'value',
             scale: true, //这个一定要设，不然barWidth和bins对应不上
@@ -2043,7 +2077,7 @@ function sunburst(data, fd) {
 
 
 //桑基图
-function sankey(data) {
+function sankey(data, fd) {
     var option
 
     var data_name = []
@@ -2067,7 +2101,7 @@ function sankey(data) {
     })
 
     option = {
-        tooltip:optionTooltip(fd),
+        tooltip: optionTooltip(fd),
         series: [{
             type: 'sankey',
             layout: 'none',
@@ -2097,7 +2131,7 @@ function sankey(data) {
 
 
 //有向图
-function directed_force(data) {
+function directed_force(data, fd) {
     var option
 
     var data_name = []
@@ -2125,6 +2159,7 @@ function directed_force(data) {
     })
 
     option = {
+        tooltip: optionTooltip(fd),
         series: [{
             type: 'graph',
             layout: 'force',
@@ -2161,7 +2196,7 @@ function directed_force(data) {
 }
 
 //和弦图
-function chord(data) {
+function chord(data, fd) {
     // 数量没有表示出来
     var option
 
@@ -2188,6 +2223,7 @@ function chord(data) {
     })
 
     option = {
+        tooltip: optionTooltip(fd),
         series: [{
             type: 'graph',
             layout: 'circular',
@@ -2302,6 +2338,7 @@ function parallel(data, fd) {
     }
 
     option = {
+        tooltip: optionTooltip(fd),
         parallelAxis: parallelAxis,
         parallel: { // 这是『坐标系』的定义
             left: '5%', // 平行坐标系的位置设置
@@ -2720,79 +2757,103 @@ function axisLabel_formatter(value, index, data_form) {
 
 //工具显示
 function optionTooltip(fd, schema) {
-    if (fd) {
-        var type = fd.viz_type
-        if (type == "dist_bar" || type == "bar" || type == "line" || type == "area" || type =="dual_line") {
-            return {
-                left: '95%',
-                trigger: 'axis',
-                axisPointer: { // 坐标轴指示器，坐标轴触发有效
-                    type: 'shadow' // 默认为直线，可选为：'line' | 'shadow'
-                },
-            }
-        } else if (type == "pie" || type == "sunburst") {
-            return {
-                confine: true,
-                trigger: 'item',
-                formatter: "{b}</br>{c} ({d}%)"
-            }
-        } else if (type == "world_map" || type == "china_map" || type == "china_city") {
-            return {} //尚未完善
-        } else if (type == "big_number" || type == "big_number_total") {
-            return {
-                confine: true,
-                trigger: 'axis',
-                axisPointer: {
-                    type: 'shadow'
-                },
-            }
-        } else if (type == "cal_heatmap" || type == "heatmap") {
-            return {} 
-        } else if (type == "box_plot") {
-            function formatter(param) {
-                return [
-                    '项目 ' + param.name + ': ',
-                    '最大值: ' + param.data[0],
-                    'Q1: ' + param.data[1],
-                    '中位数: ' + param.data[2],
-                    'Q3: ' + param.data[3],
-                    '最小值: ' + param.data[4]
-                ].join('<br/>')
-            }
-            return {
-                formatter: formatter,
-            }
-        } else if (type == "bubble") {
-            return {
-                trigger: 'item',
-                confine: true,
-                padding: 10,
-                backgroundColor: '#222',
-                borderColor: '#777',
-                borderWidth: 1,
-                formatter: function (obj) {
-                    var value = 0
-                    var series_name
-                    if (obj.value == undefined) {
-                        value = obj[0].value
-                        series_name = obj[0].seriesName
-                    } else {
-                        value = obj.value
-                        series_name = obj.seriesName
-                    }
-                    return '<div style="width:200px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;border-bottom: 1px solid rgba(255,255,255,.3); font-size: 18px;padding-bottom: 7px;margin-bottom: 7px">' +
-                        value[3] + ' (' + series_name + ')' +
-                        '</div>' +
-                        schema[0].text + '：' + value[0] + '<br>' +
-                        schema[1].text + '：' + value[1] + '<br>' +
-                        schema[2].text + '：' + value[2] + '<br>';
-                }
-            }
-        } else {
-            return {
-                confine: true,
+    var type = fd.viz_type
+    if (type == "dist_bar" || type == "bar" || type == "line" || type == "area" || type == "dual_line" || type == "histogram") {
+        return {
+            left: '95%',
+            trigger: 'axis',
+            axisPointer: { // 坐标轴指示器，坐标轴触发有效
+                type: 'shadow' // 默认为直线，可选为：'line' | 'shadow'
+            },
+        }
+    } else if (type == "pie" || type == "sunburst") {
+        return {
+            confine: true,
+            trigger: 'item',
+            formatter: "{b}</br>{c} ({d}%)"
+        }
+    } else if (type == "world_map" || type == "country_map") {
+        return {} //尚未完善
+    } else if (type == "cal_heatmap" || type == "heatmap") {
+        return {
+            formatter: function (data) {
+                return data.value[0] + '<br/>' + data.value[1]
             }
         }
+    } else if (type == "big_number" || type == "big_number_total") {
+        return {
+            confine: true,
+            trigger: 'axis',
+            axisPointer: {
+                type: 'shadow'
+            },
+        }
+    } else if (type == "box_plot") {
+        function formatter(param) {
+            return [
+                '项目 ' + param.name + ': ',
+                '最大值: ' + param.data[0],
+                'Q1: ' + param.data[1],
+                '中位数: ' + param.data[2],
+                'Q3: ' + param.data[3],
+                '最小值: ' + param.data[4]
+            ].join('<br/>')
+        }
+        return {
+            formatter: formatter,
+        }
+    } else if (type == "bubble") {
+        return {
+            trigger: 'item',
+            confine: true,
+            padding: 10,
+            backgroundColor: '#222',
+            borderColor: '#777',
+            borderWidth: 1,
+            formatter: function (obj) {
+                var value = 0
+                var series_name
+                if (obj.value == undefined) {
+                    value = obj[0].value
+                    series_name = obj[0].seriesName
+                } else {
+                    value = obj.value
+                    series_name = obj.seriesName
+                }
+                return '<div style="width:200px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;border-bottom: 1px solid rgba(255,255,255,.3); font-size: 18px;padding-bottom: 7px;margin-bottom: 7px">' +
+                    value[3] + ' (' + series_name + ')' +
+                    '</div>' +
+                    schema[0].text + '：' + value[0] + '<br>' +
+                    schema[1].text + '：' + value[1] + '<br>' +
+                    schema[2].text + '：' + value[2] + '<br>';
+            }
+        }
+    } else {
+        return {
+            confine: true,
+        }
     }
-    return {}
 }
+//刷新间隔下拉选择
+$(function () {
+    $(".refresh_select p").click(function (e) {
+        $(".refresh_select").toggleClass('open');
+        e.stopPropagation();
+    });
+
+
+    $(".refresh_select ul li").click(function (e) {
+        var _this = $(this);
+        $(".refresh_select > p").text(_this.attr('data-value'));
+        _this.addClass("Selected").siblings().removeClass("Selected");
+        $(".refresh_select").removeClass("open");
+        e.stopPropagation();
+    });
+
+
+    $(document).on('click', function () {
+        $(".refresh_select").removeClass("open");
+    })
+
+
+});
