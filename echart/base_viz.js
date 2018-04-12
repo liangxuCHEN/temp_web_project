@@ -179,14 +179,15 @@ function read_dashboard(dashboard_id, force_refresh = false, interval = 0) {
         }
         $("#btn_confirm").click(function () {
             chart_style = $("input[name='theme']:checked").val();
-            $.get('http://192.168.0.94/save_dash_css/' + dashboard_id + "?echart_style=" + chart_style,  function (res) {
+            $.get('http://192.168.0.94/save_dash_css/' + dashboard_id + "?echart_style=" + chart_style, function (res) {
                 console.log(res);
-                if(res.status==0){
+                if (res.status == 0) {
                     for (const key in echart_dict) {
                         echart_dict[key].dispose()
                     }
+                    location.reload();
                     read_dashboard(response.dashboard.id)
-                }else{
+                } else {
                     console.log(res.message);
                 }
             })
@@ -251,7 +252,17 @@ function read_dashboard(dashboard_id, force_refresh = false, interval = 0) {
     }).fail(function () {
         $(dashboard_title_id).append('<div class="alert alert-warning" role="alert">数据加载失败</div>')
     })
+    $(function () {
+        $(".refresh_select ul li").click(function (e) {
 
+            var _this = $(this);
+            var data_time = _this.attr('data-time');
+            console.log(data_time);
+            var timer = setTimeout(function () {
+                read_dashboard(dashboard_id, force_refresh = true, interval = data_time)
+            }, data_time);
+        })
+    })
     //定时刷新
     if (interval > 0) {
         setTimeout(
@@ -1874,7 +1885,6 @@ function regression(data, fd) {
         var myRegression = ecStat.regression(fd.stat_function, values, Number(fd.stat_number))
     }
 
-
     var option = {
         tooltip: optionTooltip(fd, schema),
         xAxis: {
@@ -2757,7 +2767,7 @@ function axisLabel_formatter(value, index, data_form) {
 
 //工具显示
 function optionTooltip(fd, schema) {
-    var type = fd.viz_type
+    var type = fd.viz_type    
     if (type == "dist_bar" || type == "bar" || type == "line" || type == "area" || type == "dual_line" || type == "histogram") {
         return {
             left: '95%',
@@ -2803,30 +2813,27 @@ function optionTooltip(fd, schema) {
             formatter: formatter,
         }
     } else if (type == "bubble") {
+         
+        function formatter(obj) {           
+            var value = fd.stat_function==null ? (obj.value == undefined ? obj[0].value : obj.value) : obj[0].data;
+            var series_name = obj.value == undefined ? obj[0].seriesName : obj.seriesName;
+            var tip_series_name = fd.stat_function==null ? series_name : obj[0].seriesName;
+            return '<div style="width:200px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;border-bottom: 1px solid rgba(255,255,255,.3); font-size: 18px;padding-bottom: 7px;margin-bottom: 7px">' +
+                value[3] + ' (' + tip_series_name + ')' +
+                '</div>' +
+                schema[0].text + '：' + value[0] + '<br>' +
+                schema[1].text + '：' + value[1] + '<br>' +
+                schema[2].text + '：' + value[2] + '<br>';
+        }
+        var trigger = fd.stat_function == null?'item':'axis'
         return {
-            trigger: 'item',
+            trigger: trigger,
             confine: true,
             padding: 10,
             backgroundColor: '#222',
             borderColor: '#777',
             borderWidth: 1,
-            formatter: function (obj) {
-                var value = 0
-                var series_name
-                if (obj.value == undefined) {
-                    value = obj[0].value
-                    series_name = obj[0].seriesName
-                } else {
-                    value = obj.value
-                    series_name = obj.seriesName
-                }
-                return '<div style="width:200px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;border-bottom: 1px solid rgba(255,255,255,.3); font-size: 18px;padding-bottom: 7px;margin-bottom: 7px">' +
-                    value[3] + ' (' + series_name + ')' +
-                    '</div>' +
-                    schema[0].text + '：' + value[0] + '<br>' +
-                    schema[1].text + '：' + value[1] + '<br>' +
-                    schema[2].text + '：' + value[2] + '<br>';
-            }
+            formatter: formatter,
         }
     } else {
         return {
