@@ -157,7 +157,7 @@ function read_dashboard(dashboard_id, force_refresh = false, interval = 0) {
             </div>`
                 $("#button_menu").append(html)
                 for (let j = 0; j < buttonArr[i].children.length; j++) {
-                    $(`#button_menu .dropdown .menu${i}`).append(`<li><a href="${base_echart_form_url}${buttonArr[i].children[j].dashboard_id}">${buttonArr[i].children[j].label}</a></li>`);
+                    $(`#button_menu .dropdown .menu${i}`).append(`<li><a href="${base_echart_form_url}${buttonArr[i].children[j].dashboard_id}" target="_blank" >${buttonArr[i].children[j].label}</a></li>`);
                 }
             }
         }

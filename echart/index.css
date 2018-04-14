@@ -1,9 +1,12 @@
-        .container-fluid>.row:nth-child(1) {
+        /* .container-fluid>.row:nth-child(1) {
+            position: relative;
+        } */
+        #dashboard_title{
             position: relative;
         }
         .logo {
             position: absolute;
-            top: 30px;
+            bottom: 0;
             left: 10px;
         }
 
@@ -155,11 +158,15 @@
 
         #button_menu {
             position: absolute;
-            bottom: 30px;
-            left: 368px;
+            bottom: 17px;
+            right: 120px;
+            /* float: right; */
         }
 
         #button_menu .dropdown {
             float: left;
             padding-right: 10px;
         }
+        /* html{
+            min-width: 750px;
+        } */
