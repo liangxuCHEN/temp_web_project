@@ -2,7 +2,7 @@ const base_dashboard_url = 'http://192.168.0.94/superset/dashboard_json/'
 const base_slice_url = 'http://192.168.0.94/superset/explore_json/table/'
 // const base_dashboard_url = 'http://192.168.0.186:8088/superset/dashboard_json/'
 // const base_slice_url = 'http://192.168.0.186:8088/superset/explore_json/table/'
-
+const base_echart_form_url = 'http://192.168.0.94/echart_form/'
 const dashboard_title_id = '#dashboard_title'
 const dashboard_content_id = '#data_dash'
 
@@ -129,12 +129,40 @@ function read_dashboard(dashboard_id, force_refresh = false, interval = 0) {
             return
         }
 
+        //设置样式，添加logo
+        let logo = response.dashboard.metadata.logo;
+        // console.log(logo);
+
+        if (!(JSON.stringify(logo) == "{}")) {
+            $(dashboard_title_id).append(`<div class="logo" id="logo"><a href = "javascript:void(0);">
+            <img src="${logo.src}" alt="${logo.name}" width='${logo.width}px' height="${logo.height}" title="${logo.name}"></a></div>`)
+        }
         //标题
-        $(dashboard_title_id).append('<h2 style="margin-left:10px">' +
-            response.dashboard.dashboard_title +
-            '<span class="glyphicon glyphicon-heart-empty" aria-hidden="true" id="fravstar" onclick="fravstar(' +
-            response.dashboard.id + ')"></span>' +
-            '<div class="pull-right" id="control_menu"> </div></h2>')
+        $(dashboard_title_id).append(`<h2 style="${!(JSON.stringify(logo) == "{}")?`margin-left:${logo.width + 20}px `:'margin-left:10px'}">${response.dashboard.dashboard_title}
+        <span class="glyphicon glyphicon-heart-empty" aria-hidden="true" id="fravstar" onclick="fravstar(${response.dashboard.id})"></span>
+        <div class="button_menu" id="button_menu"></div>
+        <div class="pull-right" id="control_menu"></div></h2>`)
+
+        //下拉选择切换看板
+        if (response.dashboard.metadata.button) {
+            let buttonArr = response.dashboard.metadata.button;
+            // console.log( buttonArr instanceof Array);
+            for (let i = 0; i < buttonArr.length; i++) {
+                var html = '';
+                html = `<div class="dropdown">
+            <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu${i}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                ${buttonArr[i].label}<span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu menu${i}" aria-labelledby="dropdownMenu${i}"></ul>
+            </div>`
+                $("#button_menu").append(html)
+                for (let j = 0; j < buttonArr[i].children.length; j++) {
+                    $(`#button_menu .dropdown .menu${i}`).append(`<li><a href="${base_echart_form_url}${buttonArr[i].children[j].dashboard_id}">${buttonArr[i].children[j].label}</a></li>`);
+                }
+            }
+        }
+
+
 
         //右边控制工具
         //设置css主题样式
@@ -611,7 +639,7 @@ function generate_chart(mychart, data, slice_name, description, url) {
 
         //副标题和图例显示位置
         if (description) {
-            option.title['subtext'] = description
+            // option.title['subtext'] = description
             if (option.legend !== undefined) {
                 option.legend['top'] = 50
                 option.legend['left'] = '15%'
@@ -745,8 +773,7 @@ function generate_chart(mychart, data, slice_name, description, url) {
 //每个图形独立出来数据
 
 //非时间序列的柱状图数据
-function gene_bar_series(data, legend, y_axis_format, type = 'bar', boundaryGap = true, show_max_min, show_aver) {
-    //console.log(y_axis_format)
+function gene_bar_series(data, legend, y_axis_format, show_max_min, show_aver, type = 'bar', boundaryGap = true) {
     var serie = [];
     var areaStyle
     var stack
@@ -771,6 +798,7 @@ function gene_bar_series(data, legend, y_axis_format, type = 'bar', boundaryGap 
         }
 
         //叠加状态 最后一个显示总数
+        // console.log(show_max_min);
 
         //显示最大、最小值
         if (show_max_min) {
@@ -810,7 +838,7 @@ function gene_bar_series(data, legend, y_axis_format, type = 'bar', boundaryGap 
         }
 
 
-        //显示平均值
+        // 显示平均值
         if (show_aver) {
             item.markLine = {
                 data: [{
@@ -872,7 +900,7 @@ function pie_viz(data, fd) {
     console.log(option);
 
 
-    if (!fd.show_legend) {
+    if (fd.show_legend) {
         option.legend['show'] = false
         option.series['labelLine'] = {
             'normal': {
@@ -885,7 +913,9 @@ function pie_viz(data, fd) {
             }
         }
     }
-
+    if (fd.donut) {
+        option.series['radius'] = ['45%', '70%']
+    }
     return option
 }
 
@@ -967,26 +997,12 @@ function dist_bar_viz(data, fd) {
         values.push(tmp_values)
         legend.push(verbose_map[table_id][val.key] || val.key)
     })
-
-
     option = {
         legend: {
             //orient: 'horizontal',
             //type: 'scroll',
             data: legend,
         },
-        // tooltip: {
-        //     left: '95%',
-        //     trigger: 'axis',
-        //     axisPointer: { // 坐标轴指示器，坐标轴触发有效
-        //         type: 'shadow' // 默认为直线，可选为：'line' | 'shadow'
-        //     },
-        //     // formatter:function(data,value, dataIndex){
-        //     //   console.log(data)
-        //     //   return axisLabel_formatter(value, dataIndex, fd.y_axis_format) 
-        //     // }, 
-
-        // },
         tooltip: optionTooltip(fd),
         xAxis: [{
             type: 'category',
@@ -1000,7 +1016,7 @@ function dist_bar_viz(data, fd) {
                 }
             }
         }],
-        series: gene_bar_series(values, legend, fd.y_axis_format),
+        series: gene_bar_series(values, legend, fd.y_axis_format, fd.show_max_min, fd.show_aver),
 
     }
 
@@ -1050,13 +1066,6 @@ function time_line_viz(data, fd, boundaryGap = true) {
             height: '70%',
             y: '20%'
         },
-        // tooltip: {
-        //     left: '95%',
-        //     trigger: 'axis',
-        //     axisPointer: { // 坐标轴指示器，坐标轴触发有效
-        //         type: 'shadow' // 默认为直线，可选为：'line' | 'shadow'
-        //     }
-        // },
         tooltip: optionTooltip(fd),
         xAxis: [{
             type: 'category',
@@ -1073,7 +1082,7 @@ function time_line_viz(data, fd, boundaryGap = true) {
                 }
             }
         }],
-        series: gene_bar_series(values, legend, fd.y_axis_format, type = 'line', boundaryGap = boundaryGap)
+        series: gene_bar_series(values, legend, fd.y_axis_format, fd.show_max_min, fd.show_aver, type = 'line', boundaryGap = boundaryGap)
     }
 
     //console.log('max_min:',  fd.y_axis_bounds)
@@ -1164,7 +1173,7 @@ function big_number_viz(data, fd) {
 
 //大数字
 function big_number_total(data, data_form) {
-    data_from = data_form.y_axis_format
+    data_form = data_form.y_axis_format
     option = {
         title: [{
             z: 5,
@@ -2767,14 +2776,23 @@ function axisLabel_formatter(value, index, data_form) {
 
 //工具显示
 function optionTooltip(fd, schema) {
-    var type = fd.viz_type    
+    var type = fd.viz_type
     if (type == "dist_bar" || type == "bar" || type == "line" || type == "area" || type == "dual_line" || type == "histogram") {
+        function formatter(params, index) {
+            var params_data = []
+            for (let j = 0; j < params.length; j++) {
+                params_data.push(`<span style="display:inline-block;margin-right:5px;border-radius:10px;width:9px;height:9px;background-color:${params[j].color};"></span>` +
+                    params[j].seriesName + " : " + axisLabel_formatter(params[j].data, index, fd.y_axis_format));
+            }
+            return params[0].name + '</br>' + params_data.join('</br>')
+        }
         return {
             left: '95%',
             trigger: 'axis',
             axisPointer: { // 坐标轴指示器，坐标轴触发有效
                 type: 'shadow' // 默认为直线，可选为：'line' | 'shadow'
             },
+            formatter: formatter
         }
     } else if (type == "pie" || type == "sunburst") {
         return {
@@ -2791,12 +2809,20 @@ function optionTooltip(fd, schema) {
             }
         }
     } else if (type == "big_number" || type == "big_number_total") {
+        function formatter(params, index) {
+            var params_data = []
+            for (let j = 0; j < params.length; j++) {
+                params_data.push(`<span style="display:inline-block;margin-right:5px;border-radius:10px;width:9px;height:9px;background-color:${params[j].color};"></span>` + axisLabel_formatter(params[j].data, index, fd.y_axis_format));
+            }
+            return params[0].name + '</br>' + params_data.join('</br>')
+        }
         return {
             confine: true,
             trigger: 'axis',
             axisPointer: {
                 type: 'shadow'
             },
+            formatter: formatter
         }
     } else if (type == "box_plot") {
         function formatter(param) {
@@ -2813,11 +2839,11 @@ function optionTooltip(fd, schema) {
             formatter: formatter,
         }
     } else if (type == "bubble") {
-         
-        function formatter(obj) {           
-            var value = fd.stat_function==null ? (obj.value == undefined ? obj[0].value : obj.value) : obj[0].data;
+
+        function formatter(obj) {
+            var value = fd.stat_function == null ? (obj.value == undefined ? obj[0].value : obj.value) : obj[0].data;
             var series_name = obj.value == undefined ? obj[0].seriesName : obj.seriesName;
-            var tip_series_name = fd.stat_function==null ? series_name : obj[0].seriesName;
+            var tip_series_name = fd.stat_function == null ? series_name : obj[0].seriesName;
             return '<div style="width:200px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;border-bottom: 1px solid rgba(255,255,255,.3); font-size: 18px;padding-bottom: 7px;margin-bottom: 7px">' +
                 value[3] + ' (' + tip_series_name + ')' +
                 '</div>' +
@@ -2825,7 +2851,7 @@ function optionTooltip(fd, schema) {
                 schema[1].text + '：' + value[1] + '<br>' +
                 schema[2].text + '：' + value[2] + '<br>';
         }
-        var trigger = fd.stat_function == null?'item':'axis'
+        var trigger = fd.stat_function == null ? 'item' : 'axis'
         return {
             trigger: trigger,
             confine: true,
