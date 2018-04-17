@@ -1963,9 +1963,6 @@ function histogram(data, fd) {
     var bins = ecStat.histogram(data)
 
     option = {
-        // tooltip: {
-        //     trigger: 'axis'
-        // },
         tooltip: optionTooltip(fd),
         xAxis: [{
             type: 'value',
@@ -2457,7 +2454,7 @@ function heatmap(data, fd) {
             min: data.extents[0],
             max: data.extents[1],
             textStyle: {
-                color: '#FFF',
+                color: '#ecbc8f',
             },
             calculable: true,
             orient: 'horizontal',
@@ -2777,7 +2774,7 @@ function axisLabel_formatter(value, index, data_form) {
 //工具显示
 function optionTooltip(fd, schema) {
     var type = fd.viz_type
-    if (type == "dist_bar" || type == "bar" || type == "line" || type == "area" || type == "dual_line" || type == "histogram") {
+    if (type == "dist_bar" || type == "bar" || type == "line" || type == "area" || type == "dual_line") {
         function formatter(params, index) {
             var params_data = []
             for (let j = 0; j < params.length; j++) {
@@ -2793,6 +2790,10 @@ function optionTooltip(fd, schema) {
                 type: 'shadow' // 默认为直线，可选为：'line' | 'shadow'
             },
             formatter: formatter
+        }
+    } else if (type == "histogram"){
+        return {
+            trigger: 'axis'
         }
     } else if (type == "pie" || type == "sunburst") {
         return {
