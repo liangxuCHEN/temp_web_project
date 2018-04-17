@@ -106,8 +106,6 @@ function read_dashboard(dashboard_id, force_refresh = false, interval = 0) {
     $.get(base_dashboard_url + dashboard_id).done(function (response) {
         // 先拿这个图表的参数
         console.log(response)
-
-        var chart_style = response.dashboard.metadata.echart_style;
         //初始化
         $(dashboard_title_id).children().remove()
 
@@ -131,7 +129,6 @@ function read_dashboard(dashboard_id, force_refresh = false, interval = 0) {
 
         //设置样式，添加logo
         let logo = response.dashboard.metadata.logo;
-        // console.log(logo);
 
         if (!(JSON.stringify(logo) == "{}")) {
             $(dashboard_title_id).append(`<div class="logo" id="logo"><a href = "javascript:void(0);">
@@ -146,7 +143,6 @@ function read_dashboard(dashboard_id, force_refresh = false, interval = 0) {
         //下拉选择切换看板
         if (response.dashboard.metadata.button) {
             let buttonArr = response.dashboard.metadata.button;
-            // console.log( buttonArr instanceof Array);
             for (let i = 0; i < buttonArr.length; i++) {
                 var html = '';
                 html = `<div class="dropdown">
@@ -161,8 +157,6 @@ function read_dashboard(dashboard_id, force_refresh = false, interval = 0) {
                 }
             }
         }
-
-
 
         //右边控制工具
         //设置css主题样式
@@ -187,6 +181,12 @@ function read_dashboard(dashboard_id, force_refresh = false, interval = 0) {
                 $('#fravstar').removeClass("glyphicon-heart-empty").addClass('glyphicon-heart')
             }
         }
+        var chart_style = response.dashboard.metadata.echart_style;
+        if (chart_style=='dark'){
+            $('body,html').css('background-color', '#4d98b3');
+        } else if (chart_style == 'vintage'){
+            $('body,html').css('background-color', 'rgb(243,202,139)')
+        }
         //操作样式框
         var radios = document.querySelectorAll("input[name='theme']")
         var btn_theme = document.querySelectorAll(".btn_theme");
@@ -208,7 +208,6 @@ function read_dashboard(dashboard_id, force_refresh = false, interval = 0) {
         $("#btn_confirm").click(function () {
             chart_style = $("input[name='theme']:checked").val();
             $.get('http://192.168.0.94/save_dash_css/' + dashboard_id + "?echart_style=" + chart_style, function (res) {
-                console.log(res);
                 if (res.status == 0) {
                     for (const key in echart_dict) {
                         echart_dict[key].dispose()
@@ -280,30 +279,27 @@ function read_dashboard(dashboard_id, force_refresh = false, interval = 0) {
     }).fail(function () {
         $(dashboard_title_id).append('<div class="alert alert-warning" role="alert">数据加载失败</div>')
     })
-    $(function () {
-        $(".refresh_select ul li").click(function (e) {
-
-            var _this = $(this);
-            var data_time = _this.attr('data-time');
-            console.log(data_time);
-            var timer = setTimeout(function () {
-                read_dashboard(dashboard_id, force_refresh = true, interval = data_time)
-            }, data_time);
-        })
-    })
-    //定时刷新
-    if (interval > 0) {
-        setTimeout(
-            function () {
-                read_dashboard(dashboard_id, force_refresh = force_refresh, interval = interval)
-            },
-            interval
-        )
-    }
-
 }
 
+$(function () {
+    $("#btn_confirm_refresh").click(function () {
+        var data_time = $('.refresh_select > p').attr('data-time');
+        force_refresh = true
+        console.log(data_time);
+        if (data_time > 0) {
+            var timer = setInterval(function () {
+                read_dashboard(dashboard_id, force_refresh = force_refresh, interval = parseInt(data_time));
+                $(".refresh_select ul li").click(function () {
+                    clearInterval(timer)
 
+                })
+            }, parseInt(data_time))
+        }
+        if (data_time == '0') {
+            clearInterval(timer)
+        }
+    });
+})
 
 function add_slice(position, url, slice_name, description, slice_width_unit, force_refresh, chart_style) {
 
@@ -322,7 +318,7 @@ function add_slice(position, url, slice_name, description, slice_width_unit, for
 
     $.get(temp_url).done(function (response) {
 
-        console.log(response)
+        // console.log(response)
 
         //全屏定位
         //移动端定位-每个图一栏
@@ -476,13 +472,26 @@ function generate_table(response, 　slice_name, pageSize) {
             }
         }]
         datas.forEach(function (val, index, arr) {
+            var label
+            if(val == '__timestamp'){
+                label=response.form_data.granularity_sqla
+            }else{
+                label=val
+            }
+            console.log(label);
+            
             fields.push({
                 field: val,
-                title: verbose_map[response.form_data.datasource][val] || val, //别名转化
+                title: verbose_map[response.form_data.datasource][label] || label, //别名转化
                 sortable: true
             })
         })
         return fields
+    }
+    if (response.data.records[0]['__timestamp'] !== undefined) {
+        response.data.records.forEach(function (val, index, arr) {
+            val['__timestamp'] = numberToDatetime(val['__timestamp'])
+        })
     }
 
     return table_option = {
@@ -897,10 +906,10 @@ function pie_viz(data, fd) {
             }
         }
     }
-    console.log(option);
+    // console.log(option);
 
 
-    if (fd.show_legend) {
+    if (!fd.show_legend) {
         option.legend['show'] = false
         option.series['labelLine'] = {
             'normal': {
@@ -1188,7 +1197,6 @@ function big_number_total(data, data_form) {
             subtextStyle: {
                 fontSize: 20,
                 align: 'center',
-                color: 'yellow',
             }
 
         }],
@@ -1436,7 +1444,11 @@ function word_cloud(data, fd) {
 function calcule_treemap_total(parent, child_data) {
     if (child_data[0].children !== undefined) {
         for (var i = 0; i < child_data.length; i++) {
-            child_data[i] = calcule_treemap_total(child_data[i], child_data[i].children)
+            if (child_data[i].children.length>0){
+                child_data[i] = calcule_treemap_total(child_data[i], child_data[i].children)
+            }else{
+                child_data[i].value=0
+            }
         }
     }
 
@@ -2296,9 +2308,7 @@ function chord(data, fd) {
 //平行坐标
 function parallel(data, fd) {
     var option
-
     var parallelAxis = []
-
     var begin_number = 0
     // 包含项目轴
     if (fd.include_series) {
@@ -2354,7 +2364,11 @@ function parallel(data, fd) {
     // 包含项目轴
     if (fd.include_series) {
         parallelAxis[0]['data'] = legend
+        parallelAxis[1]['inverse']=true;//第二条坐标轴翻转
+        parallelAxis[1]['nameLocation'] = 'start';//第二条坐标轴名称显示位置
     }
+    console.log(parallelAxis);
+    
 
     option = {
         tooltip: optionTooltip(fd),
@@ -2383,22 +2397,8 @@ function parallel(data, fd) {
 }
 
 //热力图
-function heatmap(data, fd) {
-    var x_name = verbose_map[fd.datasource][fd.all_columns_x] || fd.all_columns_x
-    var y_name = verbose_map[fd.datasource][fd.all_columns_y] || fd.all_columns_y
-    var metric = verbose_map[fd.datasource][fd.metric] || fd.metric
-
-    function formatter(param) {
-        return [
-            x_name + ':' + param.data[0],
-            y_name + ':' + param.data[1],
-            metric + ':' + param.data[3],
-            '占比：' + param.data[2],
-        ].join('<br/>')
-    }
-
+function heatmap(data, fd) {   
     var option
-
     var values = []
     var xAxis_data = []
     var yAxis_data = []
@@ -2802,13 +2802,29 @@ function optionTooltip(fd, schema) {
         }
     } else if (type == "world_map" || type == "country_map") {
         return {} //尚未完善
-    } else if (type == "cal_heatmap" || type == "heatmap") {
+    } else if (type == "heatmap") {
+        var x_name = verbose_map[fd.datasource][fd.all_columns_x] || fd.all_columns_x
+        var y_name = verbose_map[fd.datasource][fd.all_columns_y] || fd.all_columns_y
+        var metric = verbose_map[fd.datasource][fd.metric] || fd.metric
+
+        function formatter(param,index) {
+            return [
+                x_name + ':' + param.data[0],
+                y_name + ':' + param.data[1],
+                metric + ':' + param.data[3],
+                '占比：' + axisLabel_formatter(param.data[2], index, fd.y_axis_format)+'%',
+            ].join('<br/>')
+        }
+        return {
+            formatter: formatter,
+        }
+    } else if (type == "cal_heatmap"){
         return {
             formatter: function (data) {
                 return data.value[0] + '<br/>' + data.value[1]
             }
         }
-    } else if (type == "big_number" || type == "big_number_total") {
+    }else if (type == "big_number" || type == "big_number_total") {
         function formatter(params, index) {
             var params_data = []
             for (let j = 0; j < params.length; j++) {
@@ -2867,6 +2883,7 @@ function optionTooltip(fd, schema) {
         }
     }
 }
+
 //刷新间隔下拉选择
 $(function () {
     $(".refresh_select p").click(function (e) {
@@ -2878,6 +2895,7 @@ $(function () {
     $(".refresh_select ul li").click(function (e) {
         var _this = $(this);
         $(".refresh_select > p").text(_this.attr('data-value'));
+        $(".refresh_select > p").attr('data-time',_this.attr('data-time'));
         _this.addClass("Selected").siblings().removeClass("Selected");
         $(".refresh_select").removeClass("open");
         e.stopPropagation();

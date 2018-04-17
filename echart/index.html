@@ -96,26 +96,27 @@
                 <div class="modal-body">
                     <h4>选择此仪表板的刷新频率</h4>
                     <div class="refresh_select">
-                        <p data-value="不刷新">不刷新</p>
+                        <p data-value="不刷新" data-time="0">不刷新</p>
                         <ul>
                             <li data-value="不刷新" data-time="0" class="Selected" id="no_refresh">不刷新</li>
-                            <li data-value="10秒间隔" data-time="10000" id="refresh_10">10秒间隔</li>
-                            <li data-value="30秒间隔" data-time="30000" id="refresh_30">30秒间隔</li>
+                            <li data-value="10秒间隔" data-time="3000" id="refresh_10">10秒间隔</li>
+                            <li data-value="30秒间隔" data-time="10000" id="refresh_30">30秒间隔</li>
                             <li data-value="一分钟间隔" data-time="60000" id="refresh_60">一分钟间隔</li>
                             <li data-value="五分钟间隔" data-time="300000" id="refresh_300">五分钟间隔</li>
                         </ul>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
-                    <button type="button" class="btn btn-primary" id="btn_confirm" data-dismiss="modal">确定</button>
+                    <button type="button" class="btn btn-default" id="btn_cancel_refresh" data-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="btn_confirm_refresh" data-dismiss="modal">确定</button>
                 </div>
             </div>
         </div>
     </div>
     <script type="text/javascript">
         $(document).ready(function () {
-            read_dashboard('18')
+            read_dashboard('14')
+            dashboard_id=14
         })
     </script>
 </body>

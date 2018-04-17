@@ -1,7 +1,7 @@
         /* .container-fluid>.row:nth-child(1) {
             position: relative;
         } */
-        #dashboard_title{
+        #dashboard_title {
             position: relative;
         }
         .logo {
@@ -167,6 +167,7 @@
             float: left;
             padding-right: 10px;
         }
+
         /* html{
             min-width: 750px;
         } */
