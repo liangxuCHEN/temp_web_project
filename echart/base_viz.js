@@ -13,8 +13,9 @@ const text_color = "#fff"
 const background_color = "#333"
 const colors = ['#fad797', '#59ccf7', '#c3b4df']
 
-//echart风格
-// var chart_style = 'dark' //html要相应引入主题js文件
+//echart风格 - 背景图片地址
+dark_background_url = 'http://7xrw4h.com1.z0.glb.clouddn.com/static/images/dark_backgroud.jpg'
+vintage_background_url = 'http://7xrw4h.com1.z0.glb.clouddn.com/static/images/vintage_backgroud.png'
 
 
 var echart_dict = {} //存放echart实例
@@ -183,9 +184,9 @@ function read_dashboard(dashboard_id, force_refresh = false, interval = 0) {
         }
         var chart_style = response.dashboard.metadata.echart_style;
         if (chart_style=='dark'){
-            $('body,html').css('background', 'url(' + './img/1.jpg' + ')');
+            $('body,html').css('background', 'url(' + dark_background_url + ')');
         } else if (chart_style == 'vintage'){
-            $('body,html').css('background', 'url(' + './img/2.png' + ')');
+            $('body,html').css('background', 'url(' + vintage_background_url + ')');
         }
         //操作样式框
         var radios = document.querySelectorAll("input[name='theme']")
