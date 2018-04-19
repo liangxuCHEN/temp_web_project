@@ -1,9 +1,11 @@
         /* .container-fluid>.row:nth-child(1) {
             position: relative;
         } */
+
         #dashboard_title {
             position: relative;
         }
+
         .logo {
             position: absolute;
             bottom: 0;
@@ -171,3 +173,28 @@
         /* html{
             min-width: 750px;
         } */
+
+        .markup_style {
+            color: #eeeeee;
+            font-family: '微软雅黑';
+        }
+
+        .style_dark {
+            color: #eeeeee;
+        }
+
+        .style_vintage {
+            color: #333333
+        }
+
+        .style_macarons {
+            color: #008acd
+        }
+
+        .markup_style h3 {
+            margin:0;
+            padding: 10px 15px
+        }
+        .markup_style p {
+            padding: 0 15px
+        }
