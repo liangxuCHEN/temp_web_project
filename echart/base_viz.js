@@ -350,6 +350,23 @@ function add_slice(position, url, slice_name, description, slice_width_unit, for
                 $('#' + slice_id).empty() //清空内容,重新画
                 form_dom = generate_form(response, 　slice_name)
                 $('#' + slice_id).append(form_dom)
+                if (chart_style == 'dark') {
+                    $('#' + slice_id).css({
+                        backgroundColor: 'rgb(51,51,51)',
+                    })
+                    $('#' + slice_id + '>form').css({
+                        margin: '5px 5px 0 5px',
+                        color: '#fff'
+                    })
+                } else if (chart_style == 'vintage') {
+                    $('#' + slice_id).css({
+                        backgroundColor: 'rgb(254, 248, 239)',
+                    })
+                    $('#' + slice_id + '>form label').css({
+                        margin: '5px 5px 0 5px',
+                        color: '#000'
+                    })
+                }
                 break
 
                 //做表
