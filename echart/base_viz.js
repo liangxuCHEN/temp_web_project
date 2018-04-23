@@ -3,6 +3,7 @@ const base_slice_url = 'http://192.168.0.94/superset/explore_json/table/'
 // const base_dashboard_url = 'http://192.168.0.186:8088/superset/dashboard_json/'
 // const base_slice_url = 'http://192.168.0.186:8088/superset/explore_json/table/'
 const base_echart_form_url = 'http://192.168.0.94/echart_form/'
+const echart_css_api = 'http://192.168.0.94/save_dash_css/'
 const dashboard_title_id = '#dashboard_title'
 const dashboard_content_id = '#data_dash'
 
@@ -208,7 +209,7 @@ function read_dashboard(dashboard_id, force_refresh = false, interval = 0) {
         }
         $("#btn_confirm").click(function () {
             chart_style = $("input[name='theme']:checked").val();
-            $.get('http://192.168.0.94/save_dash_css/' + dashboard_id + "?echart_style=" + chart_style, function (res) {
+            $.get(echart_css_api + dashboard_id + "?echart_style=" + chart_style, function (res) {
                 if (res.status == 0) {
                     for (const key in echart_dict) {
                         echart_dict[key].dispose()
