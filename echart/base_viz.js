@@ -1771,7 +1771,7 @@ function cal_heatmap(data, fd) {
     var option
     var date_value = []
     var max_value = 0
-    var start_year = numberToDatetime(data.start).split('-')[0]
+    var start_year = numberToDatetime(data.start).split('/')[0]
 
     for (val in data.timestamps) {
         if (data.timestamps[val] > max_value) {
