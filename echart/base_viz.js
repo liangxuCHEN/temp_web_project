@@ -659,6 +659,13 @@ function generate_chart(mychart, data, slice_name, description, url) {
         case 'dual_line':
             option = dual_line(data.data, data.form_data)
             break;
+        
+        case 'inmap':
+            option = inmap(data.data, data.form_data)
+            break;
+        case 'newSunburst':
+            option = newSunburst(data.data, data.form_data)
+            break;
 
         default:
             //option = china_map(data.data)
@@ -1429,6 +1436,144 @@ function china_city(data, fd) {
     return option
 }
 
+// 新增旭日饼图
+function newSunburst(data, fd) {
+    var data_name = [];
+    var data_val = [];
+    var data_color = ['red', 'orange', 'yellow', 'green', 'blue'];
+
+    data.forEach(function (val) {
+        data_name.push(val.x);
+        data_val.push(val.y);
+    })
+    console.log(data_name[1]);
+    var data_test = [];
+    var arrchildern = [];
+    var objchildern = {};
+    for (let i = 0; i < data.length; i++) {
+        if (i <= 5) {
+            var obj1 = {
+                children: [{
+                    name: data_name[i],
+                    value: data_val[i],
+                }]
+            }
+            data_test.push(obj1)
+        } else if (i > 5) {
+            objchildern = {
+                // name: data_name[i],
+                value: data_val[i],
+                itemStyle: {
+                    color: data_color[i % 5]
+                },
+            }
+            arrchildern.push(objchildern)
+        }
+    }
+    data_test.push({
+        name: 'other',
+        itemStyle: {
+            color: 'purple'
+        },
+        children: arrchildern
+    })
+    option = {
+        tooltip: optionTooltip(fd),
+        title: {
+            // text: 'WORLD COFFEE RESEARCH SENSORY LEXICON',
+            // subtext: 'Source: https://worldcoffeeresearch.org/work/sensory-lexicon/',
+            textStyle: {
+                fontSize: 14,
+                align: 'center'
+            },
+            subtextStyle: {
+                align: 'center'
+            },
+            sublink: 'https://worldcoffeeresearch.org/work/sensory-lexicon/'
+        },
+        series: {
+            type: 'sunburst',
+            highlightPolicy: 'ancestor',
+            data: data_test,
+            radius: [0, '95%'],
+            sort: null,
+            levels: [{}, {
+                r0: '15%',
+                r: '35%',
+                itemStyle: {
+                    borderWidth: 2
+                },
+                label: {
+                    rotate: 'tangential',
+                    minAngle: 0.3
+                }
+            }, {
+                r0: '35%',
+                r: '70%',
+                label: {
+                    align: 'right'
+                }
+            }, {
+                r0: '70%',
+                r: '72%',
+                label: {
+                    position: 'outside',
+                    padding: 3,
+                    silent: false
+                },
+                itemStyle: {
+                    borderWidth: 3
+                }
+            }]
+        }
+    };
+    return option;
+}
+
+// 新增inmap热力图
+function inmap(data, fd) {
+    var slice_id = fd.slice_id;
+    var Heatmaphtml = '';
+    Heatmaphtml += '<div id="allmap"></div>' 
+    $('body').append(Heatmaphtml);
+    var inmap = new inMap.Map({
+        id: 'allmap',
+        center: ["105.403119", "38.028658"],
+        skin: "Blueness",
+        zoom: {
+            value: 5,
+            show: true,
+            max: 18,
+            min: 5
+        },
+    });
+    var heatmapOverlay = new inMap.HeatOverlay({
+        style: {
+            normal: {
+                radius: 15, // 半径
+            }
+        },
+        data: data,
+        event: {
+            onState(state) {
+                console.log(state);
+            }
+        }
+    });
+    inmap.add(heatmapOverlay)
+
+    var linemap = new inMap.Map({
+        id: 'linemap',
+        center: ["68.403119", "58.028658"],
+        skin: "Blueness",
+        zoom: {
+            value: 5,
+            show: true,
+            max: 18,
+            min: 4
+        },
+    })
+}
 
 //词云
 function word_cloud(data, fd) {
