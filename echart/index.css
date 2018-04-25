@@ -200,12 +200,12 @@
             padding: 0 15px
         }
 
-        #allmap {
+        .geo_map {
             width: 100%;
             height: 100%;
         }
 
-        #allmap p {
+        .geo_map p {
             margin-left: 5px; 
             font-size: 14px;
         }

@@ -4,6 +4,7 @@ const base_slice_url = 'http://192.168.0.94/superset/explore_json/table/'
 // const base_slice_url = 'http://192.168.0.186:8088/superset/explore_json/table/'
 const base_echart_form_url = 'http://192.168.0.94/echart_form/'
 const echart_css_api = 'http://192.168.0.94/save_dash_css/'
+const fav_url = 'http://192.168.0.94/superset/favstar/Dashboard/'
 const dashboard_title_id = '#dashboard_title'
 const dashboard_content_id = '#data_dash'
 
@@ -52,7 +53,7 @@ function sortNumber(a, b) {
 
 //收藏
 function fravstar(object_id) {
-    $.get('/superset/favstar/Dashboard/' + object_id + '/' + fravstar_action).done(function (response) {
+    $.get(fav_url + object_id + '/' + fravstar_action).done(function (response) {
         if (fravstar_action == 'select') {
             alert('收藏成功')
             $('#fravstar').removeClass("glyphicon-heart-empty").addClass('glyphicon-heart')
@@ -101,7 +102,6 @@ if (current_url.indexOf('?') > -1) {
 }
 
 function read_dashboard(dashboard_id, force_refresh = false, interval = 0) {
-    console.log(force_refresh, interval)
     var get_dashboat_url
     var slice_width_unit = Math.floor(document.documentElement.clientWidth / 12) - 1
     //请求数据
@@ -243,8 +243,6 @@ function read_dashboard(dashboard_id, force_refresh = false, interval = 0) {
                 }
             }
 
-            //console.log(position)
-
             var table_id = val.form_data.datasource.split('__')[0]
 
             var form_data = val.form_data
@@ -264,7 +262,6 @@ function read_dashboard(dashboard_id, force_refresh = false, interval = 0) {
             var url = base_slice_url + table_id + '?form_data=' + JSON.stringify(val.form_data)
 
 
-            //console.log(url)
             //TODO:这里是异步请求，放回数据有先后，移动端有区别，需要用postition来调整参数
             verbose_map = response.verbose_map
             if (interval > 0) {
@@ -287,7 +284,6 @@ $(function () {
     $("#btn_confirm_refresh").click(function () {
         var data_time = $('.refresh_select > p').attr('data-time');
         force_refresh = true
-        console.log(data_time);
         if (data_time > 0) {
             var timer = setInterval(function () {
                 read_dashboard(dashboard_id, force_refresh = force_refresh, interval = parseInt(data_time));
@@ -320,7 +316,7 @@ function add_slice(position, url, slice_name, description, slice_width_unit, for
 
     $.get(temp_url).done(function (response) {
 
-        // console.log(response)
+        console.log(response)
 
         //全屏定位
         //移动端定位-每个图一栏
@@ -344,7 +340,7 @@ function add_slice(position, url, slice_name, description, slice_width_unit, for
             }
         }
 
-        // console.log(response.form_data.viz_type)
+        console.log(response.form_data.viz_type)
 
         switch (response.form_data.viz_type) {
             // 做表单
@@ -406,23 +402,31 @@ function add_slice(position, url, slice_name, description, slice_width_unit, for
                     $(".markup_style").addClass("style_macarons")
                 }
                 break
-
-                //画图 , 不需要清空DOM, clear()就可重新画
+            
+            //画图 , 不需要清空DOM, clear()就可重新画
             default:
-                // 高度留一点空隙
-                $('#' + slice_id).css("margin-top", "5px")
-                //TODO:chart_style 风格选择
-
-                var myChart
-                if (!force_refresh) {
-                    myChart = echarts.init(document.getElementById(slice_id), chart_style)
-                    echart_dict[slice_id] = myChart
-
+                //TODO:根据不同类型选择对应的地图, 暂时默认是热力图
+                if ((response.form_data.viz_type == 'country_map') & (response.form_data.stat_unit == 'city')) {
+                    $('#' + slice_id).empty()
+                    $('#'+slice_id).append('<div id="'+ response.form_data.slice_id +'map" class="geo_map"></div>')
+                    inmapCount(response.data, response.form_data)
                 } else {
-                    myChart = echart_dict[slice_id]
-                    myChart.clear()
+                    // 高度留一点空隙
+                    $('#' + slice_id).css("margin-top", "5px")
+                    //TODO:chart_style 风格选择
+
+                    var myChart
+                    if (!force_refresh) {
+                        myChart = echarts.init(document.getElementById(slice_id), chart_style)
+                        echart_dict[slice_id] = myChart
+
+                    } else {
+                        myChart = echart_dict[slice_id]
+                        myChart.clear()
+                    }
+                    generate_chart(myChart, response, 　slice_name, description, url)
                 }
-                generate_chart(myChart, response, 　slice_name, description, url)
+                
         }
 
     }).fail(function () {
@@ -589,6 +593,7 @@ function generate_chart(mychart, data, slice_name, description, url) {
         case 'country_map':
             if (data.form_data.stat_unit == 'city') {
                 option = china_city(data.data, data.form_data)
+                //option = 
             } else {
                 option = china_map(data.data, data.form_data)
             }
@@ -606,7 +611,11 @@ function generate_chart(mychart, data, slice_name, description, url) {
             option = word_cloud(data.data, data.form_data)
             break;
         case 'treemap':
-            option = treemap(data.data, data.form_data)
+            if(data.form_data.is_sunburst){
+                option = newSunburst(data.data, data.form_data)    
+            } else {
+                option = treemap(data.data, data.form_data)    
+            }
             break;
         case 'box_plot':
             option = box_plot(data.data, data.form_data)
@@ -662,9 +671,6 @@ function generate_chart(mychart, data, slice_name, description, url) {
         
         case 'inmap':
             option = inmap(data.data, data.form_data)
-            break;
-        case 'newSunburst':
-            option = newSunburst(data.data, data.form_data)
             break;
 
         default:
@@ -864,7 +870,6 @@ function gene_bar_series(data, legend, y_axis_format, show_max_min, show_aver, t
                                 label: {
                                     show: true,
                                     formatter: function (params, index) {
-                                        console.log(params);
                                         return axisLabel_formatter(params.value, index, y_axis_format);
                                     }
                                 }
@@ -879,7 +884,6 @@ function gene_bar_series(data, legend, y_axis_format, show_max_min, show_aver, t
                                 label: {
                                     show: true,
                                     formatter: function (params, index) {
-                                        console.log(params);
                                         return axisLabel_formatter(params.value, index, y_axis_format);
                                     }
                                 }
@@ -902,7 +906,6 @@ function gene_bar_series(data, legend, y_axis_format, show_max_min, show_aver, t
                             label: {
                                 show: true,
                                 formatter: function (params, index) {
-                                    console.log(params);
                                     return axisLabel_formatter(params.value, index, y_axis_format);
                                 }
                             }
@@ -950,7 +953,6 @@ function pie_viz(data, fd) {
             }
         }
     }
-    // console.log(option);
 
 
     if (!fd.show_legend) {
@@ -1436,65 +1438,38 @@ function china_city(data, fd) {
     return option
 }
 
-// 新增旭日饼图
+// 新增旭日饼图 -- treemap_data
 function newSunburst(data, fd) {
-    var data_name = [];
-    var data_val = [];
-    var data_color = ['red', 'orange', 'yellow', 'green', 'blue'];
-
-    data.forEach(function (val) {
-        data_name.push(val.x);
-        data_val.push(val.y);
-    })
-    console.log(data_name[1]);
-    var data_test = [];
-    var arrchildern = [];
-    var objchildern = {};
-    for (let i = 0; i < data.length; i++) {
-        if (i <= 5) {
-            var obj1 = {
-                children: [{
-                    name: data_name[i],
-                    value: data_val[i],
-                }]
+    var values = [];
+    var data_color = ['red', 'orange', 'green', 'blue'];
+    var data = data[0]  // 只获取第一个数据, 多个饼图暂时不考虑
+    var other_childern = [];
+    
+    data.children.forEach(function(val, index){
+        if (index <= data_color.length) {
+            values.push(val)
+        } else {
+            val['itemStyle'] = {
+                color: data_color[index % data_color.length]
             }
-            data_test.push(obj1)
-        } else if (i > 5) {
-            objchildern = {
-                // name: data_name[i],
-                value: data_val[i],
-                itemStyle: {
-                    color: data_color[i % 5]
-                },
-            }
-            arrchildern.push(objchildern)
+            other_childern.push(val)
         }
-    }
-    data_test.push({
+    })
+
+    values.push({
         name: 'other',
         itemStyle: {
             color: 'purple'
         },
-        children: arrchildern
+        children: other_childern
     })
+
     option = {
         tooltip: optionTooltip(fd),
-        title: {
-            // text: 'WORLD COFFEE RESEARCH SENSORY LEXICON',
-            // subtext: 'Source: https://worldcoffeeresearch.org/work/sensory-lexicon/',
-            textStyle: {
-                fontSize: 14,
-                align: 'center'
-            },
-            subtextStyle: {
-                align: 'center'
-            },
-            sublink: 'https://worldcoffeeresearch.org/work/sensory-lexicon/'
-        },
         series: {
             type: 'sunburst',
             highlightPolicy: 'ancestor',
-            data: data_test,
+            data: values,
             radius: [0, '95%'],
             sort: null,
             levels: [{}, {
@@ -1530,49 +1505,142 @@ function newSunburst(data, fd) {
     return option;
 }
 
-// 新增inmap热力图
-function inmap(data, fd) {
-    var slice_id = fd.slice_id;
-    var Heatmaphtml = '';
-    Heatmaphtml += '<div id="allmap"></div>' 
-    $('body').append(Heatmaphtml);
+// 新增inmap
+function inmapCount(data, fd) {
+    var table_id = fd.datasource
+    var values = []
+    data.forEach(function (val, index, arr) {
+        var geoCoord = geoCoordMap[val.country_id];
+        if (geoCoord) {
+            values.push({
+                'count': val.metric,
+                'lng': geoCoord[0],
+                'lat': geoCoord[1],
+                'name': val.country_id,
+            })
+        }
+    })
     var inmap = new inMap.Map({
-        id: 'allmap',
+        id: fd.slice_id+'map',
         center: ["105.403119", "38.028658"],
-        skin: "Blueness",
+        skin: "WhiteLover",   //TODO 换背景参数
         zoom: {
             value: 5,
             show: true,
             max: 18,
             min: 5
         },
-    });
-    var heatmapOverlay = new inMap.HeatOverlay({
-        style: {
-            normal: {
-                radius: 15, // 半径
-            }
-        },
-        data: data,
-        event: {
-            onState(state) {
-                console.log(state);
-            }
-        }
-    });
-    inmap.add(heatmapOverlay)
-
-    var linemap = new inMap.Map({
-        id: 'linemap',
-        center: ["68.403119", "58.028658"],
-        skin: "Blueness",
-        zoom: {
-            value: 5,
-            show: true,
-            max: 18,
-            min: 4
-        },
     })
+
+    var overlay
+
+    switch (fd.inmap_type){
+        case 'Heat':
+            overlay = new inMap.HeatOverlay({
+                //TODO: 热力图颜色设置
+                style: {
+                    normal: {
+                        radius: fd.max_bubble_size, // 半径
+                    }
+                },
+                data: values,
+                event: {
+                    onState(state) {
+                        // console.log('地图变化状态', state); //滚动变化
+                    }
+                }
+            })
+        break
+
+        case 'Honeycomb':
+            overlay = new inMap.HoneycombOverlay({
+                tooltip: {
+                    show: true,
+                    formatter: '{count}'
+                },
+                legend: {
+                    show: true,
+                    title: verbose_map[table_id][fd.secondary_metric] || fd.secondary_metric
+                },
+                style: {
+                    colors: [
+                        "rgba(156,200,249,0.7)", "rgba(93,158,247,0.7)",
+                        "rgba(134,207,55,0.7)",
+                        "rgba(252,198,10,0.7)", "rgba(255,144,0,0.7)", "rgba(255,72,0,0.7)",
+                        "rgba(255,0,0,0.7)"
+                    ],
+                    normal: {
+                        backgroundColor: 'rgba(200, 200, 200, 0.5)',
+                        padding: 3,
+                        size: fd.max_bubble_size,
+                    },
+                    mouseOver: {
+                        shadowColor: 'rgba(255, 250, 255, 1)',
+                        shadowBlur: 20,
+                    },
+                    selected: {
+                        backgroundColor: 'rgba(184,0,0,1)',
+                        borderColor: "rgba(255,255,255,1)"
+                    },
+                },
+                data: values
+            })
+        break;
+
+        default:
+            overlay = new inMap.DotOverlay({
+                tooltip: {
+                    show: true,
+                    formatter: function(params) {
+                        return (`<p>${params.name}:${params.count}</p>`)
+                    },
+
+                },
+                legend: {
+                    show: true,
+                    title: verbose_map[table_id][fd.secondary_metric] || fd.secondary_metric
+                },
+                style: {
+                    colors: [    //加颜色能自动区分
+                        "rgba(156,200,249,0.7)",
+                        "rgba(93,158,247,0.7)",
+                        "rgba(134,207,55,0.7)",
+                        "rgba(252,198,10,0.7)",
+                        "rgba(255,144,0,0.7)",
+                        "rgba(255,72,0,0.7)",
+                        "rgba(255,0,0,0.7)"
+                    ],
+                    normal: {
+                        backgroundColor: 'rgba(200, 200, 50, 1)',
+                        borderWidth: 1,
+                        borderColor: "rgba(255,255,255,1)",
+                        size: 10,
+                        label: {     //地方名字
+                           show: true,
+                           color: "rgba(255,0,0,1)"
+                        }
+                    },
+                    mouseOver: {
+                        backgroundColor: 'rgba(200, 200, 200, 1)',
+                        borderColor: "rgba(255,255,255,1)",
+                        borderWidth: 4,
+                    },
+                    selected: {
+                        backgroundColor: 'rgba(184,0,0,1)',
+                        borderColor: "rgba(255,255,255,1)"
+                    },
+                },
+                data: values,
+                event: {
+                    // onMouseClick: function (item, event) {
+                    //     //能获取当前点的信息
+                    // }
+                }
+            });
+    }
+
+    inmap.add(overlay)
+
 }
 
 //词云
@@ -1580,13 +1648,11 @@ function word_cloud(data, fd) {
     // 数据适配echart格式
     var option = {}
     var values = []
-    //var legend = []
     data.forEach(function (val, index, arr) {
         values.push({
             'value': val.size,
             'name': val.text
         })
-        //legend.push(val.text)        
     })
     option = {
         tooltip: optionTooltip(fd),
@@ -2214,9 +2280,6 @@ function sunburst(data, fd) {
 
     })
 
-    //console.log(values[1])
-    //console.log(values[1].sort())
-
     //转换为符合echart格式
 
     //最里面一层
@@ -2284,7 +2347,6 @@ function sunburst(data, fd) {
     //console.log(option)
     return option
 }
-
 
 //桑基图
 function sankey(data, fd) {
@@ -2546,7 +2608,6 @@ function parallel(data, fd) {
         parallelAxis[1]['inverse']=true;//第二条坐标轴翻转
         parallelAxis[1]['nameLocation'] = 'start';//第二条坐标轴名称显示位置
     }
-    console.log(parallelAxis);
     
 
     option = {
