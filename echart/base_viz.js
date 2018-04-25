@@ -112,11 +112,11 @@ function read_dashboard(dashboard_id, force_refresh = false, interval = 0) {
         $(dashboard_title_id).children().remove()
 
         //访问禁止
-        // if (response.dashboard == undefined) {
-        //   alert("没有权限访问，请联系管理员"); 
-        //   window.location.href="/superset/welcome"
-        //   return
-        // }
+        if (response.dashboard == undefined) {
+          alert("没有权限访问，请联系管理员"); 
+          window.location.href="/superset/welcome"
+          return
+        }
         //权限问题提醒
         if (response.dashboard.status == 401) {
             $(dashboard_title_id).append('<div class="alert alert-warning" role="alert">' + response.dashboard.message + '<a href="/superset/welcome"> 返回首页</a></div>')
@@ -536,7 +536,7 @@ function generate_table(response, 　slice_name, pageSize) {
     }
 
     return table_option = {
-        //search: true,
+        search: response.form_data.include_search,  //是否添加搜索框
         pagination: true,
         pageNumber: 1,
         pageSize: pageSize * 3 - 6,
@@ -667,10 +667,6 @@ function generate_chart(mychart, data, slice_name, description, url) {
 
         case 'dual_line':
             option = dual_line(data.data, data.form_data)
-            break;
-        
-        case 'inmap':
-            option = inmap(data.data, data.form_data)
             break;
 
         default:
@@ -832,7 +828,7 @@ function generate_chart(mychart, data, slice_name, description, url) {
 //每个图形独立出来数据
 
 //非时间序列的柱状图数据
-function gene_bar_series(data, legend, y_axis_format, show_max_min, show_aver, type = 'bar', boundaryGap = true) {
+function gene_bar_series(data, legend, fd, type = 'bar', boundaryGap = true) {
     var serie = [];
     var areaStyle
     var stack
@@ -845,6 +841,9 @@ function gene_bar_series(data, legend, y_axis_format, show_max_min, show_aver, t
         areaStyle = {}
         stack = undefined
     }
+
+    console.log(data)
+
     data.forEach(function (val, index, arr) {
         var item = {
             name: legend[index],
@@ -856,11 +855,8 @@ function gene_bar_series(data, legend, y_axis_format, show_max_min, show_aver, t
             data: val,
         }
 
-        //叠加状态 最后一个显示总数
-        // console.log(show_max_min);
-
         //显示最大、最小值
-        if (show_max_min) {
+        if (fd.show_max_min) {
             item.markPoint = {
                 data: [{
                         type: 'max',
@@ -870,7 +866,7 @@ function gene_bar_series(data, legend, y_axis_format, show_max_min, show_aver, t
                                 label: {
                                     show: true,
                                     formatter: function (params, index) {
-                                        return axisLabel_formatter(params.value, index, y_axis_format);
+                                        return axisLabel_formatter(params.value, index, fd.y_axis_format);
                                     }
                                 }
                             }
@@ -884,7 +880,7 @@ function gene_bar_series(data, legend, y_axis_format, show_max_min, show_aver, t
                                 label: {
                                     show: true,
                                     formatter: function (params, index) {
-                                        return axisLabel_formatter(params.value, index, y_axis_format);
+                                        return axisLabel_formatter(params.value, index, fd.y_axis_format);
                                     }
                                 }
                             }
@@ -896,7 +892,7 @@ function gene_bar_series(data, legend, y_axis_format, show_max_min, show_aver, t
 
 
         // 显示平均值
-        if (show_aver) {
+        if (fd.show_aver) {
             item.markLine = {
                 data: [{
                     type: 'average',
@@ -906,7 +902,7 @@ function gene_bar_series(data, legend, y_axis_format, show_max_min, show_aver, t
                             label: {
                                 show: true,
                                 formatter: function (params, index) {
-                                    return axisLabel_formatter(params.value, index, y_axis_format);
+                                    return axisLabel_formatter(params.value, index, fd.y_axis_format);
                                 }
                             }
                         }
@@ -914,6 +910,25 @@ function gene_bar_series(data, legend, y_axis_format, show_max_min, show_aver, t
                 }]
             }
         }
+
+        //显示目标线
+        if (fd.target_line){
+            
+            if (item.markLine == undefined) {
+                item.markLine = {data: []}
+            }
+
+            item.markLine.data.push([{
+                    //TODO: 目标线设计,颜色,显示值
+                    name: '目标线',
+                    coord: [0, fd.target_line]
+                },{
+                    coord: [val.length-1, fd.target_line]
+                }]
+            )
+            
+        }
+
         serie.push(item);
     })
     return serie
@@ -1071,7 +1086,7 @@ function dist_bar_viz(data, fd) {
                 }
             }
         }],
-        series: gene_bar_series(values, legend, fd.y_axis_format, fd.show_max_min, fd.show_aver),
+        series: gene_bar_series(values, legend, fd),
 
     }
 
@@ -1137,7 +1152,7 @@ function time_line_viz(data, fd, boundaryGap = true) {
                 }
             }
         }],
-        series: gene_bar_series(values, legend, fd.y_axis_format, fd.show_max_min, fd.show_aver, type = 'line', boundaryGap = boundaryGap)
+        series: gene_bar_series(values, legend, fd, type = 'line', boundaryGap = boundaryGap)
     }
 
     //console.log('max_min:',  fd.y_axis_bounds)
