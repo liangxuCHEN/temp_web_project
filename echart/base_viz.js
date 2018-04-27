@@ -838,7 +838,7 @@ function gene_bar_series(data, legend, fd, type = 'bar', boundaryGap = true) {
         }
         stack = '总量'
     } else {
-        areaStyle = {}
+        //areaStyle = {}
         stack = undefined
     }
 
