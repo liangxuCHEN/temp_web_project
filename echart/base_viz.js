@@ -621,7 +621,7 @@ function generate_chart(mychart, data, slice_name, description, url) {
             option = box_plot(data.data, data.form_data)
             break;
         case 'bubble':
-            if (data.form_data.stat_function == null) {
+            if (data.form_data.stat_function == "") {
                 option = bubble(data.data, data.form_data)
             } else {
                 //其他类似方法
@@ -1976,7 +1976,6 @@ function bubble(data, fd) {
         })
 
     })
-
     option = {
         legend: {
             data: legend,
@@ -3116,9 +3115,9 @@ function optionTooltip(fd, schema) {
     } else if (type == "bubble") {
 
         function formatter(obj) {
-            var value = fd.stat_function == null ? (obj.value == undefined ? obj[0].value : obj.value) : obj[0].data;
+            var value = fd.stat_function == "" ? (obj.value == undefined ? obj[0].value : obj.value) : obj[0].data;
             var series_name = obj.value == undefined ? obj[0].seriesName : obj.seriesName;
-            var tip_series_name = fd.stat_function == null ? series_name : obj[0].seriesName;
+            var tip_series_name = fd.stat_function == "" ? series_name : obj[0].seriesName;
             return '<div style="width:200px;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;border-bottom: 1px solid rgba(255,255,255,.3); font-size: 18px;padding-bottom: 7px;margin-bottom: 7px">' +
                 value[3] + ' (' + tip_series_name + ')' +
                 '</div>' +
@@ -3126,7 +3125,7 @@ function optionTooltip(fd, schema) {
                 schema[1].text + '：' + value[1] + '<br>' +
                 schema[2].text + '：' + value[2] + '<br>';
         }
-        var trigger = fd.stat_function == null ? 'item' : 'axis'
+        var trigger = fd.stat_function == "" ? 'item' : 'axis'
         return {
             trigger: trigger,
             confine: true,
