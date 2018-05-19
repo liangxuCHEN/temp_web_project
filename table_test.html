@@ -153,6 +153,7 @@
 		var reader = new FileReader();
 		var input = document.getElementById('input-file');
 		var fileData;
+		var post_url = "http://192.168.0.94/test_upload_data"
 		// 下拉框
 		objectColumns = [{
 				data: "columnName",
@@ -184,12 +185,12 @@
 				var container3 = document.getElementById('file_example')
 				var obj111 = {}
 				fileData.meta.fields.forEach(element => {
-					console.log(element);
+					// console.log(element);
 					obj111[element] = "";
 				});
 
 				fileData.data.splice(0, 0, obj111)
-				console.log(fileData.data);
+				// console.log(fileData.data);
 				// 新增表格
 				hot3 = new Handsontable(container3, {
 					data: fileData.data,
@@ -197,7 +198,7 @@
 					//minSpareRows: 1,
 					//columns: objectColumns,
 				});
-				console.log(fileData);
+				// console.log(fileData);
 				// 获取到表格的列数
 				eleL = fileData.meta.fields.length;
 				for (let i = 0; i < eleL; i++) {
@@ -260,7 +261,7 @@
 			for (let i = 0; i < eleL; i++) {
 				fieldType.push($("#data_type_" + i).val())
 			}
-			console.log(fieldType);
+			// console.log(fieldType);
 			var res = hot3.getData();
 			res[0] = fieldType
 			// 创建一个空对象
@@ -282,11 +283,11 @@
 
 		function upload() {
 			$.ajax({
-				url: 'http://192.168.0.94/test_upload',
+				url: post_url,
 				type: 'POST',
 				data: data,
 				// async: true,
-				dataType: 'json',
+				contentType: 'application/json;charset=UTF-8',
 				success: function (res) {
 					alert('success');
 					// data.deleteAll();
