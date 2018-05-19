@@ -1,206 +1,307 @@
 <!doctype html>
+
 <head>
-  <title>显示表格处理</title>
-  <style type="text/css">
-  	html, body {
-  	  height: 100%;
-  	}
+	<title>显示表格处理</title>
+	<style type="text/css">
+		* {
+			margin: 0;
+			padding: 0;
+		}
 
-  	html {
-  	  display: table;
-  	  margin: auto;
-  	}
+		html,
+		body {
+			height: 100%;
+		}
 
-  	body {
-  	  display: table-cell;
-  	  vertical-align: middle;
-  	}
-  </style>
+		html {
+			display: table;
+			margin: auto;
+		}
+
+		body {
+			display: table-cell;
+			vertical-align: middle;
+		}
+
+		.upload_box {
+			width: 800px;
+			height: 200px;
+		}
+
+		.upload_tips {
+			width: 800px;
+			height: 200px;
+			border: 2px dashed #0094ff;
+			display: block;
+			text-align: center;
+
+		}
+
+		.upload_tips>input {
+			background: none;
+			outline: none;
+			opacity: 0;
+			position: absolute;
+			width: 0;
+		}
+
+		.upload_tips>a {
+			color: #0094ff;
+			font-size: 14px;
+			display: inline-block;
+		}
+
+		.upload_tips>p {
+			display: inline-block;
+			font-size: 14px;
+		}
+
+		.table-example-wrap {
+			width: 800px;
+			height: 300px;
+			margin-top: 50px;
+		}
+
+		.table-example-wrap>table {
+			margin-top: 20px;
+			width: 800px;
+			height: 150px;
+			font-size: 12px;
+			text-align: center;
+		}
+	</style>
 
 </head>
 
 <body>
+	<div class="upload_tips">
+		<input type="file" id="input-file" accept=".csv" value="点击上传文件">
+		<a href="javascript:void()">点击上传图片</a>
+		<p>或者拖拽上传</p>
+		<div class="upload_box" id="upload_box">
+			<p align="center">请将文件拖到这里</p>
+			<table class="table">
+				<tbody class="tbody"></tbody>
+			</table>
+		</div>
+	</div>
+	<div class="table-example-wrap">
+		<dl>
+			<dt>表格示例</dt>
+			<dt>1.请上传有标准行列的一维数据表格。（有合并单元格的数据请处理过后再上传，否则可能出现表头识别有误）</dt>
+			<dt>2.日期字段需包含年月日（如2016/1/1），或年月日时分秒。（如2016/1/1 00:00:00）</dt>
+		</dl>
+		<table border="1" cellspacing="0" cellpadding="0" style="border-collapse: collapse;">
+			<tr>
+				<td>数据的列名</td>
+				<td>数据的列名</td>
+				<td>数据的列名</td>
+				<td>数据的列名</td>
+				<td>数据的列名</td>
+				<td>数据的列名</td>
+			</tr>
+			<tr>
+				<td>序号</td>
+				<td>操作员</td>
+				<td>员工编号</td>
+				<td>部门</td>
+				<td>职位</td>
+				<td>操作时间</td>
+			</tr>
+			<tr>
+				<td>1</td>
+				<td>史珍香</td>
+				<td>9527</td>
+				<td>销售一部</td>
+				<td>销售总监</td>
+				<td>2016/8/8</td>
+			</tr>
+			<tr>
+				<td>2</td>
+				<td>魏生津</td>
+				<td>28256</td>
+				<td>销售一部</td>
+				<td>销售总监</td>
+				<td>2016/8/8</td>
+			</tr>
+			<tr>
+				<td>3</td>
+				<td>沈京兵</td>
+				<td>28257</td>
+				<td>销售一部</td>
+				<td>销售总监</td>
+				<td>2016/8/8</td>
+			</tr>
+		</table>
+	</div>
+	<button id="sure_upl" onclick="toggle()" style="display:none">确认上传</button>
+	<button id="cancel" onclick="cancel()" style="display:none">取消</button>
+	<div id="file_example" class="hot handsontable htColumnHeaders"></div>
 
-  <p align="center">
-    <input type="file" id="input-file" accept=".csv">
-  </p>
-  <p>读取文档</p>
-  <div id="file_example" class="hot handsontable htColumnHeaders"></div>
-  
-  <div id="example1" class="hot handsontable htColumnHeaders"></div>
-  <div id="example2" class="hot handsontable htColumnHeaders"></div>
-
-  <button onclick="toggle()">
-  Toggle type
-</button>
-  <script src="https://cdn.jsdelivr.net/handsontable/0.28.4/handsontable.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/papaparse/4.1.2/papaparse.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/papaparse/4.1.2/papaparse.min.js"></script>
-
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/handsontable/0.28.4/handsontable.full.min.css">
-
-  <script type="text/javascript">
-  /*debugger*/
-  var input = document.getElementById('input-file')
-  //读取文档
-
-  input.onchange = function () {
-  var file = this.files[0]
-  var reader = new FileReader()
-
-  reader.onload = function (e) {
-    var csv = e.target.result
-    var fileData = Papa.parse(csv, {
-      header: true,    //有表头
-      skipEmptyLines: true   //空行不要
-    })
-    console.log('文档数据', fileData)
-
-    var container3 = document.getElementById('file_example')
-	var hot3
-
-	hot3 = new Handsontable(container1, {
-	  data: fileData.data,
-	  colHeaders: fileData.meta.fields,
-	  //minSpareRows: 1,
-	  //columns: objectColumns,
-	});
-
-   }
-
-  reader.readAsText(file)
-
- }
-
-
-
-
-
-  var
-    objectData = [
-        //空出第一行，留作选择参数
-    	{
-    		"name": "",
-		    "age": "",
-		    "education": "",
-		    "level": ""
-    	},
-		{
-		    "name": "Luc",
-		    "age": "22",
-		    "education": "Bac+3",
-		    "level": "2-4"
-		},
-		{
-		    "name": "Tom",
-		    "education": "Bac+4",
-		    "level": "3-4",
-		    "age": "22",
-		},
-
-	],
-
-	ColumnType = [
-		{
-		    "columnName": "age",
-		    "type": "String",
-		},
-		{
-		    "columnName": "name",
-		    "type": "String",
-		},
-		{
-		    "columnName": "education",
-		    "type": "String",
-		},
-		{
-		    "columnName": "level",
-		    "type": "String",
-		},
-	],
+	<div id="example1" class="hot handsontable htColumnHeaders"></div>
 
 
-  	
-	objectColumns = [
-		{
-			data: "columnName",
-			type: 'text',
-		},
-    	{
-    		data: "type",
-      		type: 'dropdown',    //下拉框选择
-      		source: ['String', 'Number', 'Date']
-    	},
-  	],
+	<script src="https://cdn.jsdelivr.net/handsontable/0.28.4/handsontable.full.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/papaparse/4.1.2/papaparse.min.js"></script>
+	<script src="js/jquery-1.11.0.min.js"></script>
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/handsontable/0.28.4/handsontable.full.min.css">
 
- container2 = document.getElementById('example2'),
- hot2,
- container1 = document.getElementById('example1'),
- hot1;
+	<script type="text/javascript">
+		var hot3;
+		var eleL;
+		var up_box = document.getElementById('upload_box');
+		var reader = new FileReader();
+		var input = document.getElementById('input-file');
+		var fileData;
+		// 下拉框
+		objectColumns = [{
+				data: "columnName",
+				type: 'text',
+			},
+			{
+				data: "type",
+				type: 'dropdown', //下拉框选择
+				source: ['String', 'Number', 'Date']
+			},
+		];
 
- //上面是初始化所有变量
- 
-  //例子1
-  hot1 = new Handsontable(container1, {
-    data: ColumnType,
-    colHeaders: true,
-    minSpareRows: 1,
-    columns: objectColumns,
-  });
+		// 构建表格
+		function selectOption(instance, td, row, col, prop, value, cellProperties) {
+			td.style.verticalAlign = "middle";
+			td.style.textAlign = "center";
+			td.innerHTML =
+				`<select style="width:100%; height:90%;" id="data_type_${col}" class="rowselect"><option value ="String" selected="true">字符串</option><option value ="numeric">数字</option><option value ="date">日期</option></select>`;
+		}
+
+		// 载入文件
+		function loadFile() {
+			reader.onload = function (e) {
+				var csv = e.target.result
+				fileData = Papa.parse(csv, {
+					header: true, //有表头
+					skipEmptyLines: true //空行不要
+				})
+				var container3 = document.getElementById('file_example')
+				var obj111 = {}
+				fileData.meta.fields.forEach(element => {
+					console.log(element);
+					obj111[element] = "";
+				});
+
+				fileData.data.splice(0, 0, obj111)
+				console.log(fileData.data);
+				// 新增表格
+				hot3 = new Handsontable(container3, {
+					data: fileData.data,
+					colHeaders: fileData.meta.fields,
+					//minSpareRows: 1,
+					//columns: objectColumns,
+				});
+				console.log(fileData);
+				// 获取到表格的列数
+				eleL = fileData.meta.fields.length;
+				for (let i = 0; i < eleL; i++) {
+					hot3.setCellMeta(0, i, "renderer", selectOption);
+				}
+				hot3.render();
+				//  弹出上传框
+				$("#sure_upl").show();
+				// 弹出取消框
+				$("#cancel").show();
+				//  关闭上传框
+				$(".upload_tips").hide();
+				// 关闭上传说明
+				$(".table-example-wrap").hide();
+			}
+		}
+
+		// 拖拽上传
+		//利用html5 FormData() API,创建一个接收文件的对象，因为可以多次拖拽，这里采用单例模式创建对象Dragfiles
+		var Dragfiles = (function () {
+			var instance;
+			return function () {
+				if (!instance) {
+					instance = new FormData();
+				}
+				return instance;
+			}
+		}());
+		// 添加拖拽事件
+		up_box.ondragover = function (up_box) {
+			// 阻止浏览器默认打开文件的操作
+			up_box.preventDefault();
+		}
+		up_box.ondrop = function (up_box) {
+			//阻止浏览器默认打开文件的操作
+			up_box.preventDefault();
+
+			function selectOption(instance, td, row, col, prop, value, cellProperties) {
+				td.style.verticalAlign = "middle";
+				td.style.textAlign = "center";
+				td.innerHTML =
+					`<select style="width:100%; height:90%;" id="data_type_${col}" class="rowselect"><option value ="String" selected="true">字符串</option><option value ="numeric">数字</option><option value ="date">日期</option></select>`;
+			}
+			var file = up_box.dataTransfer.files[0];
+			loadFile();
+			reader.readAsText(file);
+		}
 
 
-  //例子2
-  hot2 = new Handsontable(container2, {
-    data: objectData, //数据
-    colHeaders: ['xx', 'age', 'education','level'],  //表头， 可以是list， true， false
-    rowHeaders: true,    //行数显示
-    minSpareRows: 0,  //底部预留行数
-    columns:[            //每个列的属性
-    	{
-    		name: "TT",      //这个名字相当于id，方便查找
-    		type: 'text',   //数据类型
-    		data: 'name'     //数据来源, 是data的字典， 和colHeader没有关系
-    	},
-    	{
-    		name: "Code",
-    		type: 'numeric',
-    		data: 'age'
-    	},
-    	{
-    		name: "eee",
-    		type: 'text',
-    		data: 'education'
-    	},
-    	{
-    		name: "ll",
-    		type: 'text',
-    		data: 'level'
-    	}
-    ]
-  });
+		// 点击上传
+		input.onchange = function () {
+			var file = this.files[0]
+			loadFile();
+			reader.readAsText(file);
+		}
+		var data;
+		//上面是初始化所有变量
+		function toggle() {
+			var fieldType = []
+			for (let i = 0; i < eleL; i++) {
+				fieldType.push($("#data_type_" + i).val())
+			}
+			console.log(fieldType);
+			var res = hot3.getData();
+			res[0] = fieldType
+			// 创建一个空对象
+			json_res = {};
+			json_res.data = [];
+			// 去掉数组里第一项数据类型
+			res.splice(0, 1);
+			json_res.data = res;
+			json_res.meta = {};
+			fileData.meta.fields.forEach((element, index) => {
+				json_res.meta[element] = {};
+				json_res.meta[element]["index"] = index;
+				json_res.meta[element]["type"] = fieldType[index];
+			});
+			console.log(JSON.stringify(json_res));
+			data = JSON.stringify(json_res);
+			upload();
+		}
 
+		function upload() {
+			$.ajax({
+				url: 'http://192.168.0.94/test_upload',
+				type: 'POST',
+				data: data,
+				// async: true,
+				dataType: 'json',
+				success: function (res) {
+					alert('success');
+					// data.deleteAll();
+					console.log(res);
+					
+					$('.tbody').empty();
+				},
+				error: function (returndata) {
+					alert('failed');
+				}
+			})
+		}
 
-
-
-  function selectOption(instance, td, row, col, prop, value, cellProperties) {
-	  td.style.verticalAlign = "middle";
-	  td.style.textAlign = "center";
-	  td.innerHTML = `<select style="width:100%; height:90%;" id="data_type_${row}"><option value ="String" selected="true">字符串</option><option value ="numeric">数字</option><option value ="date">日期</option></select>`;
-  }
-
-
-  function toggle() {
-	  
-	  console.log(hot2.getCellMeta(0, 0).type);
-	  console.log(hot2.getDataAtCell(0, 0));
-	  console.log('----------');
-
-     hot2.setCellMeta(0, 0, "renderer", selectOption);   //在第一行, 改变属性只能对cell， 要整列（column），要用遍历
-     hot2.setCellMeta(0, 1, "renderer", selectOption);
-     
-     hot2.render();
-     console.log('字段类型', hot2.getData())  //输出数据
-}
-
-  </script>
- </body>  
+		function cancel() {
+			location.reload();
+		}
+	</script>
+</body>
