@@ -75,7 +75,7 @@
 
 <body>
 	<div class="upload_tips">
-		<input type="file" id="input-file" accept=".csv" value="点击上传文件">
+		<input type="file" id="input-file" accept=".csv , .xlsx">
 		<a href="javascript:void()">点击上传图片</a>
 		<p>或者拖拽上传</p>
 		<div class="upload_box" id="upload_box">
@@ -134,26 +134,46 @@
 			</tr>
 		</table>
 	</div>
-	<button id="sure_upl" onclick="toggle()" style="display:none">确认上传</button>
+	<button id="csv_nextStep" style="display:none" onclick="csv_nextStep()">下一步</button>
+	<button id="xlsx_nextStep" style="display:none" onclick="xlsx_nextStep()">下一步</button>
+	<button id="csv_sure_upl" onclick="csv_toggle()" style="display:none">确认上传</button>
+	<button id="xlsx_sure_upl" onclick="xlsx_toggle()" style="display:none">确认上传</button>
 	<button id="cancel" onclick="cancel()" style="display:none">取消</button>
 	<div id="file_example" class="hot handsontable htColumnHeaders"></div>
 
 	<div id="example1" class="hot handsontable htColumnHeaders"></div>
+	<div class="addName" style="display:none">
+		<table>
+			<tr>
+				<td>表格的名称</td>
+				<td><input type="text" id="tableName"></td>
+			</tr>
+			<tr>
+				<td>文件夹</td>
+				<td><input type="text" id="floderName"></td>
+			</tr>
+		</table>
+	</div>
 
+
+	<script>
+	</script>
 
 	<script src="https://cdn.jsdelivr.net/handsontable/0.28.4/handsontable.full.min.js"></script>
 	<script src="https://cdn.jsdelivr.net/papaparse/4.1.2/papaparse.min.js"></script>
+	<script type="text/javascript" src="xlsx.core.min.js"></script>
 	<script src="js/jquery-1.11.0.min.js"></script>
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/handsontable/0.28.4/handsontable.full.min.css">
 
 	<script type="text/javascript">
+		var input = document.getElementById('input-file');
 		var hot3;
 		var eleL;
 		var up_box = document.getElementById('upload_box');
-		var reader = new FileReader();
-		var input = document.getElementById('input-file');
+		var reader_xlsx = new FileReader();
+		var reader_csv = new FileReader();
 		var fileData;
-		var post_url = "http://192.168.0.94/test_upload_data"
+		var xlsxData;
 		// 下拉框
 		objectColumns = [{
 				data: "columnName",
@@ -173,24 +193,92 @@
 			td.innerHTML =
 				`<select style="width:100%; height:90%;" id="data_type_${col}" class="rowselect"><option value ="String" selected="true">字符串</option><option value ="numeric">数字</option><option value ="date">日期</option></select>`;
 		}
+		
+		var xlsx_row;
+		function load_xlsxFile(){
+			reader_xlsx.onload = function(e){
+				var data = e.target.result;
+				var container3 = document.getElementById('file_example')
+				// 以二进制流方式读取得到整份excel表格对象
+				worker = XLSX.read(data,{
+					type:'binary'
+				});
+				
+				// 存储获取到的数据
+				xlsxData = [];
+				// 表格的表格范围，可用于判断表头是否数量是否正确
+				var fromTo = '';
+				// 遍历每张表读取
+				for (var sheet in worker.Sheets) {
+					if (worker.Sheets.hasOwnProperty(sheet)) {
+						fromTo = worker.Sheets[sheet]['!ref'];
+						xlsxData = xlsxData.concat(XLSX.utils.sheet_to_json(worker.Sheets[sheet]));
+						// break; // 如果只取第一张表，就取消注释这行
+					}
+				}
+				// console.log(xlsxData);
+				// 存储列名
+				xlsx_row = [];
+				xlsxData.forEach((element,index) => {
+					for(var k in xlsxData[index]){
+						if (xlsx_row.indexOf(k) == -1){
+							xlsx_row.push(k)
+						}
+					}
+				});
+				
+				console.log(xlsx_row);
+				var obj111 = {}
+				  xlsx_row.forEach(element => {
+					  obj111[element] = "";
+				  });
+				xlsxData.splice(0, 0, obj111);
+				console.log(xlsxData);
+				
+				// 新增表格
+				hot3 = new Handsontable(container3, {
+					data: xlsxData,
+					colHeaders: xlsx_row,
+					//minSpareRows: 1,
+					//columns: objectColumns,
+				});
+				// 获取到表格的列数
+				eleL = xlsx_row.length;
+				// console.log(eleL);
+				for (let i = 0; i < eleL; i++) {
+					hot3.setCellMeta(0, i, "renderer", selectOption);
+				}
+				hot3.render();
+				$("#xlsx_nextStep").show();
+				// 弹出取消框
+				$("#cancel").show();
+				//  关闭上传框
+				$(".upload_tips").hide();
+				// 关闭上传说明
+				$(".table-example-wrap").hide();
+			}
+		}
 
 		// 载入文件
-		function loadFile() {
-			reader.onload = function (e) {
-				var csv = e.target.result
+		function load_csvFile() {
+			reader_csv.onload = function (e) {
+				var csv = e.target.result;
+				// console.log(csv);
 				fileData = Papa.parse(csv, {
 					header: true, //有表头
 					skipEmptyLines: true //空行不要
 				})
+				console.log(fileData);
+				
 				var container3 = document.getElementById('file_example')
 				var obj111 = {}
 				fileData.meta.fields.forEach(element => {
 					// console.log(element);
 					obj111[element] = "";
 				});
+				// console.log(fileData);
+				fileData.data.splice(0, 0, obj111);
 
-				fileData.data.splice(0, 0, obj111)
-				// console.log(fileData.data);
 				// 新增表格
 				hot3 = new Handsontable(container3, {
 					data: fileData.data,
@@ -205,8 +293,8 @@
 					hot3.setCellMeta(0, i, "renderer", selectOption);
 				}
 				hot3.render();
-				//  弹出上传框
-				$("#sure_upl").show();
+				
+				$("#csv_nextStep").show();
 				// 弹出取消框
 				$("#cancel").show();
 				//  关闭上传框
@@ -232,10 +320,9 @@
 			// 阻止浏览器默认打开文件的操作
 			up_box.preventDefault();
 		}
-		up_box.ondrop = function (up_box) {
+		up_box.ondrop = function (up_box, target) {
 			//阻止浏览器默认打开文件的操作
 			up_box.preventDefault();
-
 			function selectOption(instance, td, row, col, prop, value, cellProperties) {
 				td.style.verticalAlign = "middle";
 				td.style.textAlign = "center";
@@ -243,56 +330,184 @@
 					`<select style="width:100%; height:90%;" id="data_type_${col}" class="rowselect"><option value ="String" selected="true">字符串</option><option value ="numeric">数字</option><option value ="date">日期</option></select>`;
 			}
 			var file = up_box.dataTransfer.files[0];
-			loadFile();
-			reader.readAsText(file);
+			var filetypes = [".xlsx", ".csv"];
+
+			
+			var name = up_box.dataTransfer.files[0].name;
+			if (name) {
+				var isnext = false;
+				var fileend = name.substring(name.lastIndexOf("."));
+				if (filetypes && filetypes.length > 0) {
+					for (var i = 0; i < filetypes.length; i++) {
+						if (filetypes[i] == fileend) {
+							isnext = true;
+							break;
+						}
+					}
+					if (fileend == ".xlsx") {
+						load_xlsxFile();
+						reader_xlsx.readAsBinaryString(file);
+					} else if (fileend == ".csv") {
+						console.log(456);
+						load_csvFile();
+						reader_csv.readAsText(file);
+					}
+				}
+				if (!isnext) {
+					alert("不接受此文件类型！");
+					target.value = "";
+					return false;
+				}
+			}
 		}
 
-
+		
 		// 点击上传
 		input.onchange = function () {
+			var filetypes = [".xlsx", ".csv"];
 			var file = this.files[0]
-			loadFile();
-			reader.readAsText(file);
+			var name  = this.files[0].name;
+			// console.log(name);
+			if (name) {
+				var isnext = false;
+				var fileend = name.substring(name.lastIndexOf("."));
+				// console.log(fileend);
+				if (filetypes && filetypes.length > 0) {
+					for (var i = 0; i < filetypes.length; i++) {
+						if (filetypes[i] == fileend) {
+							isnext = true;
+							break;
+						}
+					}
+					if (fileend == ".xlsx") {
+						load_xlsxFile();
+						reader_xlsx.readAsBinaryString(file);
+					}else if(fileend == ".csv"){
+						load_csvFile();
+						reader_csv.readAsText(file);
+					}
+				}
+				if (!isnext) {
+					alert("不接受此文件类型！");
+					target.value = "";
+					return false;
+				}
+			}
 		}
-		var data;
-		//上面是初始化所有变量
-		function toggle() {
+
+
+		// 处理xlsx文件的数据 转换成json
+		var xlsx_data;
+		function xlsx_toggle(){
 			var fieldType = []
 			for (let i = 0; i < eleL; i++) {
 				fieldType.push($("#data_type_" + i).val())
 			}
-			// console.log(fieldType);
-			var res = hot3.getData();
-			res[0] = fieldType
+			console.log(fieldType);
+			var xlsx_res = hot3.getData();
+			xlsx_res[0] = fieldType
 			// 创建一个空对象
 			json_res = {};
-			json_res.data = [];
+			json_res.xlse_data = [];
 			// 去掉数组里第一项数据类型
-			res.splice(0, 1);
-			json_res.data = res;
+			xlsx_res.splice(0, 1);
+			json_res.xlse_data = xlsx_res;
+			json_res.meta = {};
+			xlsx_row.forEach((element, index) => {
+				json_res.meta[element] = {};
+				json_res.meta[element]["index"] = index;
+				json_res.meta[element]["type"] = fieldType[index];
+			});
+			// 获取输入的内容
+			json_res.tableName = $("#tableName").val();
+			json_res.floder = $("#floderName").val();
+			console.log(JSON.stringify(json_res));
+			xlsx_data = JSON.stringify(json_res);
+			xlsx_upload();
+		}
+		
+		// 处理csv文件的数据 转换成json
+		var csv_data;
+		//上面是初始化所有变量
+		function csv_toggle() {
+			var fieldType = []
+			for (let i = 0; i < eleL; i++) {
+				fieldType.push($("#data_type_" + i).val())
+			}
+			console.log(fieldType);
+			var csv_res = hot3.getData();
+			csv_res[0] = fieldType
+			// 创建一个空对象
+			json_res = {};
+			json_res.csv_data = [];
+			// 去掉数组里第一项数据类型
+			csv_res.splice(0, 1);
+			json_res.csv_data = csv_res;
+			
 			json_res.meta = {};
 			fileData.meta.fields.forEach((element, index) => {
 				json_res.meta[element] = {};
 				json_res.meta[element]["index"] = index;
 				json_res.meta[element]["type"] = fieldType[index];
 			});
+			// 获取输入的内容
+			json_res.tableName = $("#tableName").val();
+			json_res.floder = $("#floderName").val();
 			console.log(JSON.stringify(json_res));
-			data = JSON.stringify(json_res);
-			upload();
+			csv_data = JSON.stringify(json_res);
+			csv_upload();
+		}
+		
+		// 点击下一步
+		function csv_nextStep() {
+			$("#csv_nextStep").hide();
+			$(".addName").show();
+			//  弹出上传框
+			$("#csv_sure_upl").show();
+		}
+		
+		function xlsx_nextStep(){
+			$("#xlsx_nextStep").hide();
+			$(".addName").show();
+			//  弹出上传框
+			$("#xlsx_sure_upl").show();
 		}
 
-		function upload() {
+
+		// xlsx文件的上传
+		function xlsx_upload(){
 			$.ajax({
-				url: post_url,
+				url: 'http://192.168.0.94/test_upload',
 				type: 'POST',
-				data: data,
+				data: xlsx_data,
 				// async: true,
-				contentType: 'application/json;charset=UTF-8',
-				success: function (res) {
+				dataType: 'json',
+				success: function (xlsx_res) {
 					alert('success');
 					// data.deleteAll();
-					console.log(res);
-					
+					console.log(xlsx_res);
+
+					$('.tbody').empty();
+				},
+				error: function (returndata) {
+					alert('failed');
+				}
+			})
+		}
+
+		// csv文件的上传
+		function csv_upload() {
+			$.ajax({
+				url: 'http://192.168.0.94/test_upload',
+				type: 'POST',
+				data: csv_data,
+				// async: true,
+				dataType: 'json',
+				success: function (csv_res) {
+					alert('success');
+					// data.deleteAll();
+					console.log(csv_res);
+
 					$('.tbody').empty();
 				},
 				error: function (returndata) {
