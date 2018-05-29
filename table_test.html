@@ -69,6 +69,9 @@
 			font-size: 12px;
 			text-align: center;
 		}
+ 		.addName{
+			margin-top: 20px;
+		}
 	</style>
 
 </head>
@@ -193,7 +196,12 @@
 			td.innerHTML =
 				`<select style="width:100%; height:90%;" id="data_type_${col}" class="rowselect"><option value ="String" selected="true">字符串</option><option value ="numeric">数字</option><option value ="date">日期</option></select>`;
 		}
-		
+
+		//插入队列指定位置
+		Array.prototype.insert = function ( index, item ) {
+		    this.splice( index, 0, item );
+		};
+
 		var xlsx_row;
 		function load_xlsxFile(){
 			reader_xlsx.onload = function(e){
@@ -207,26 +215,35 @@
 				// 存储获取到的数据
 				xlsxData = [];
 				// 表格的表格范围，可用于判断表头是否数量是否正确
-				var fromTo = '';
+				// var fromTo = '';
 				// 遍历每张表读取
 				for (var sheet in worker.Sheets) {
 					if (worker.Sheets.hasOwnProperty(sheet)) {
-						fromTo = worker.Sheets[sheet]['!ref'];
+						// fromTo = worker.Sheets[sheet]['!ref'];
 						xlsxData = xlsxData.concat(XLSX.utils.sheet_to_json(worker.Sheets[sheet]));
-						// break; // 如果只取第一张表，就取消注释这行
+						break; // 如果只取第一张表，就取消注释这行
 					}
 				}
-				// console.log(xlsxData);
+				
 				// 存储列名
 				xlsx_row = [];
-				xlsxData.forEach((element,index) => {
-					for(var k in xlsxData[index]){
+				// xlsxData.forEach((element,index) => {
+				// 	for(var k in xlsxData[index]){
+				// 		if (xlsx_row.indexOf(k) == -1){
+				// 			xlsx_row.push(k)
+				// 		}
+				// 	}
+				// });
+				
+				xlsxData.forEach((element,row_index) => {
+					var key_index = 0
+					for(var k in xlsxData[row_index]){
 						if (xlsx_row.indexOf(k) == -1){
-							xlsx_row.push(k)
+							xlsx_row.insert(key_index, k)
 						}
+						key_index += 1
 					}
 				});
-				
 				console.log(xlsx_row);
 				var obj111 = {}
 				  xlsx_row.forEach(element => {
@@ -239,6 +256,10 @@
 				hot3 = new Handsontable(container3, {
 					data: xlsxData,
 					colHeaders: xlsx_row,
+					colHeaders: true,
+					// colWidths: 100,
+					// manualColumnMove: true,
+    				// manualRowMove: true
 					//minSpareRows: 1,
 					//columns: objectColumns,
 				});
@@ -330,7 +351,7 @@
 					`<select style="width:100%; height:90%;" id="data_type_${col}" class="rowselect"><option value ="String" selected="true">字符串</option><option value ="numeric">数字</option><option value ="date">日期</option></select>`;
 			}
 			var file = up_box.dataTransfer.files[0];
-			var filetypes = [".xlsx", ".csv"];
+			var filetypes = [".xlsx",",xls", ".csv"];
 
 			
 			var name = up_box.dataTransfer.files[0].name;
@@ -344,7 +365,7 @@
 							break;
 						}
 					}
-					if (fileend == ".xlsx") {
+					if (fileend == ".xlsx" || fileend ==".xls") {
 						load_xlsxFile();
 						reader_xlsx.readAsBinaryString(file);
 					} else if (fileend == ".csv") {
@@ -364,7 +385,7 @@
 		
 		// 点击上传
 		input.onchange = function () {
-			var filetypes = [".xlsx", ".csv"];
+			var filetypes = [".xlsx",",xls", ".csv"];
 			var file = this.files[0]
 			var name  = this.files[0].name;
 			// console.log(name);
@@ -379,7 +400,7 @@
 							break;
 						}
 					}
-					if (fileend == ".xlsx") {
+					if (fileend == ".xlsx" || fileend ==".xls") {
 						load_xlsxFile();
 						reader_xlsx.readAsBinaryString(file);
 					}else if(fileend == ".csv"){
@@ -408,10 +429,10 @@
 			xlsx_res[0] = fieldType
 			// 创建一个空对象
 			json_res = {};
-			json_res.xlse_data = [];
+			json_res.data = [];
 			// 去掉数组里第一项数据类型
 			xlsx_res.splice(0, 1);
-			json_res.xlse_data = xlsx_res;
+			json_res.data = xlsx_res;
 			json_res.meta = {};
 			xlsx_row.forEach((element, index) => {
 				json_res.meta[element] = {};
@@ -439,10 +460,10 @@
 			csv_res[0] = fieldType
 			// 创建一个空对象
 			json_res = {};
-			json_res.csv_data = [];
+			json_res.data = [];
 			// 去掉数组里第一项数据类型
 			csv_res.splice(0, 1);
-			json_res.csv_data = csv_res;
+			json_res.data = csv_res;
 			
 			json_res.meta = {};
 			fileData.meta.fields.forEach((element, index) => {
